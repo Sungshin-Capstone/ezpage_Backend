@@ -1,3 +1,6 @@
 from django.contrib import admin
+from .models import Expense
 
-# Register your models here.
+@admin.register(Expense)
+class ExpenseAdmin(admin.ModelAdmin):
+    list_display = ('id', 'amount', 'currency', 'date')  # 실제 필드에 맞게 수정
