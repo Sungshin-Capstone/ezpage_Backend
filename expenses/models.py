@@ -15,4 +15,30 @@ class Expense(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.amount} {self.currency} on {self.date}"
 
+class Wallet(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallets')
+    trip = models.ForeignKey('Trip', on_delete=models.CASCADE, related_name='wallets')
+    country_code = models.CharField(max_length=5)
+    currency_code = models.CharField(max_length=5)
+    currency_unit = models.PositiveIntegerField()
+    quantity = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        unique_together = ('user', 'trip', 'currency_unit')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.trip} - {self.currency_unit}{self.currency_code} x {self.quantity}"
+
+
+class Trip(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='trips')
+    country = models.CharField(max_length=5)  # 예: 'JP', 'US', 'KR'
+    start_date = models.DateField()
+    end_date = models.DateField()
+    companions = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username}'s trip to {self.country} ({self.start_date} ~ {self.end_date})"
