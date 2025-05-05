@@ -13,6 +13,7 @@ from .serializers import WalletScanResultSerializer
 from .serializers import TripSerializer
 from .serializers import WalletUpdateSerializer
 from .serializers import WalletDeductSerializer
+from rest_framework.generics import RetrieveUpdateDestroyAPIView
 
 class ScanResultExpenseCreateView(generics.CreateAPIView):
     serializer_class = ScanResultExpenseSerializer
@@ -50,11 +51,21 @@ class ExpenseListByDateView(generics.ListAPIView):
         date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
         return Expense.objects.filter(user=self.request.user, date=date_obj).order_by('-created_at')
 
-class WalletScanResultCreateView(generics.CreateAPIView):
-    queryset = Wallet.objects.all()
-    serializer_class = WalletScanResultSerializer
-    permission_classes = [permissions.IsAuthenticated]
+class WalletScanResultView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        user = request.user
+        wallets = Wallet.objects.filter(user=user).order_by('-created_at')
+        serializer = WalletScanResultSerializer(wallets, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = WalletScanResultSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class WalletSummaryView(APIView):
     permission_classes = [IsAuthenticated]
@@ -146,3 +157,8 @@ class TripCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+class TripDetailView(RetrieveUpdateDestroyAPIView):
+    queryset = Trip.objects.all()
+    serializer_class = TripSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'pk'

@@ -149,3 +149,20 @@ import os
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# settings.py
+
+LANGUAGE_CODE = 'ko'
+USE_I18N = True
+USE_L10N = True
+
+LANGUAGES = [
+    ('en', 'English'),
+    ('ko', 'Korean'),
+]
+
+LOCALE_PATHS = [
+    BASE_DIR / 'locale',
+]

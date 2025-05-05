@@ -1,24 +1,35 @@
 from django.urls import path
-from .views import (
+from .views.expense_views import (
     ExpenseCreateView,
     ExpenseListByTripView,
     ExpenseListByDateView,
     ScanResultExpenseCreateView,
-    WalletScanResultCreateView,
+)
+from .views.trip_views import (
     TripCreateView,
+    TripDetailView,
+)
+from .views.wallet_views import (
     WalletSummaryView,
+    WalletScanResultView,
     WalletUpdateView,
-    WalletDeductView
+    WalletDeductView,
 )
 
 urlpatterns = [
-    path('create/', ExpenseCreateView.as_view(), name='expense-create'),
-    path('<int:trip_id>/', ExpenseListByTripView.as_view(), name='expense-list-trip'),
-    path('', ExpenseListByDateView.as_view(), name='expense-list-date'),
-    path('scan-result/', ScanResultExpenseCreateView.as_view(), name='expense-scan-result'),
-    path('wallet/scan-result/', WalletScanResultCreateView.as_view(), name='wallet-scan-result'),
+    # Expense endpoints
+    path('expenses/', ExpenseCreateView.as_view(), name='expense-create'),
+    path('expenses/<int:trip_id>/', ExpenseListByTripView.as_view(), name='expense-list-trip'),
+    path('expenses/date/', ExpenseListByDateView.as_view(), name='expense-list-date'),
+    path('expenses/scan-result/', ScanResultExpenseCreateView.as_view(), name='expense-scan-result'),
+    
+    # Trip endpoints
     path('trips/', TripCreateView.as_view(), name='trip-create'),
+    path('trips/<int:pk>/', TripDetailView.as_view(), name='trip-detail'),
+    
+    # Wallet endpoints
     path('wallet/', WalletSummaryView.as_view(), name='wallet-summary'),
+    path('wallet/scan-result/', WalletScanResultView.as_view(), name='wallet-scan-result'),
     path('wallet/<int:pk>/update/', WalletUpdateView.as_view(), name='wallet-update'),
     path('wallet/deduct/', WalletDeductView.as_view(), name='wallet-deduct'),
 ]
