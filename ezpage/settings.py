@@ -83,11 +83,15 @@ WSGI_APPLICATION = 'ezpage.wsgi.application'
 
 import dj_database_url
 from dotenv import load_dotenv
-
+import os
 load_dotenv()
 
 DATABASES = {
-    'default': dj_database_url.config()
+    'default': dj_database_url.config(
+        default=os.getenv("DATABASE_URL"),
+        conn_max_age=600,
+        ssl_require=True
+    )
 }
 
 
