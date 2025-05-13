@@ -28,15 +28,24 @@ class WalletScanResultSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = self.context['request'].user
         trip_id = validated_data.pop('trip_id')
-        trip = Trip.objects.get(id=trip_id, user=user)
+        try:
+            trip = Trip.objects.get(id=trip_id, user=user)
+        except Trip.DoesNotExist:
+            raise serializers.ValidationError({"trip_id": "해당 여행이 존재하지 않습니다."})
 
+        # 🔧 user와 trip을 defaults에 명시적으로 추가
         wallet, created = Wallet.objects.update_or_create(
             user=user,
             trip=trip,
             currency_unit=validated_data['currency_unit'],
-            defaults={**validated_data}
+            defaults={
+                **validated_data,
+                "user": user,
+                "trip": trip
+            }
         )
         return wallet
+
 
 class WalletSerializer(serializers.ModelSerializer):
     class Meta:
