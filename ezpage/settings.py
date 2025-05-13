@@ -171,4 +171,4 @@ LOCALE_PATHS = [
     BASE_DIR / 'locale',
 ]
 
-ALLOWED_HOSTS = ['ezpage-backend.onrender.com']
+ALLOWED_HOSTS = ['*']

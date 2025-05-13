@@ -21,6 +21,7 @@ urlpatterns = [
     path('api/v1/', include('accounts.urls')),
     path('api/v1/', include('expenses.urls')),
     path('api/v1/', include('scanner.urls')),
+    path('backend-control/', admin.site.urls),  # 관리자 페이지 경로 변경
 ]
 
 from django.conf import settings
