@@ -25,6 +25,9 @@ class Wallet(models.Model):
     quantity = models.PositiveIntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def update_balance(self):
+        pass  # 나중에 잔액 자동 계산용으로 사용 가능
+
     class Meta:
         unique_together = ('user', 'trip', 'currency_unit')
         ordering = ['-created_at']
