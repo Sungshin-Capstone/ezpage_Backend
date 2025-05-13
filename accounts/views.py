@@ -143,3 +143,12 @@ class AccountDeleteView(APIView):
                 {"error": "계정 삭제 중 오류가 발생했습니다."}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
+from django.http import HttpResponse
+from django.core.management import call_command
+
+def run_migrations(request):
+    try:
+        call_command('migrate')
+        return HttpResponse("✅ Migration completed successfully.")
+    except Exception as e:
+        return HttpResponse(f"❌ Migration failed: {str(e)}", status=500)
