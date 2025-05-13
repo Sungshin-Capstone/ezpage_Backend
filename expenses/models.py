@@ -5,6 +5,7 @@ from django.conf import settings
 
 class Expense(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='expenses')
+    is_scan_result = models.BooleanField(default=False, verbose_name="스캔 결과 여부")
     amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="지출 금액")
     currency = models.CharField(max_length=10, verbose_name="통화")
     description = models.TextField(blank=True, null=True, verbose_name="지출 설명")
