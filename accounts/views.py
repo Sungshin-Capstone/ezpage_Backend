@@ -44,9 +44,12 @@ class ProfileView(APIView):
             "profile_image": user.profile_image.url if user.profile_image else None
         })
 
+from rest_framework.permissions import AllowAny
+
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
+    permission_classes = [AllowAny]
 
 class PasswordResetRequestView(APIView):
     def post(self, request):
