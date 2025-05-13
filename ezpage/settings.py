@@ -81,10 +81,13 @@ WSGI_APPLICATION = 'ezpage.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
+import dj_database_url
+from dotenv import load_dotenv
+
+load_dotenv()
+
 DATABASES = {
-    'default': dj_database_url.config(
-        default='sqlite:///db.sqlite3'  # 로컬에서 DATABASE_URL 없으면 SQLite
-    )
+    'default': dj_database_url.config()
 }
 
 
@@ -180,7 +183,11 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 REST_FRAMEWORK = {
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
-    ]
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',  # 선택 사항
+    ),
 }
+
