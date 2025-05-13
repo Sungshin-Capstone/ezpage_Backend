@@ -14,7 +14,8 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 class CustomLoginView(TokenObtainPairView):
-    serializer_class = CustomTokenObtainPairSerializer
+    def get(self, request, *args, **kwargs):
+        return Response({"detail": "이 API는 POST 요청만 지원합니다."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
