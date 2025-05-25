@@ -17,7 +17,7 @@ class ExpenseSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Expense
-        fields = ['id', 'user', 'amount', 'currency', 'category', 'description', 'manual_input', 'date', 'time', 'created_at']
+        fields = ['id', 'user', 'amount', 'currency', 'category', 'description', 'manual_input', 'date', 'time', 'created_at', 'is_scan_result']
         read_only_fields = ['id', 'user', 'created_at']
 
 class WalletScanResultSerializer(serializers.ModelSerializer):
