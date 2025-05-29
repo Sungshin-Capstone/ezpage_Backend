@@ -14,11 +14,15 @@ class ExpenseSerializer(serializers.ModelSerializer):
     currency = serializers.ChoiceField(choices=["KRW", "JPY", "CNY", "USD", "EUR", "GBP"])
     category = serializers.ChoiceField(choices=Expense.CATEGORY_CHOICES)
     is_scan_result = serializers.BooleanField(required=False, default=False)
+    time = serializers.SerializerMethodField()
     
     class Meta:
         model = Expense
         fields = ['id', 'user', 'amount', 'currency', 'category', 'description', 'manual_input', 'date', 'time', 'created_at', 'is_scan_result']
         read_only_fields = ['id', 'user', 'created_at']
+
+    def get_time(self, obj):
+        return obj.time.strftime("%H:%M")
 
 class WalletScanResultSerializer(serializers.ModelSerializer):
     trip_id = serializers.IntegerField(write_only=True)

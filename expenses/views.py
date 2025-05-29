@@ -1,4 +1,3 @@
-
 from rest_framework import generics, permissions
 from rest_framework import serializers
 from .models import Expense,Wallet,Trip
@@ -162,3 +161,5 @@ class TripDetailView(RetrieveUpdateDestroyAPIView):
     serializer_class = TripSerializer
     permission_classes = [IsAuthenticated]
     lookup_field = 'pk'
+
+

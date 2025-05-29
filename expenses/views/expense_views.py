@@ -29,7 +29,10 @@ class ExpenseListByDateView(APIView):
     def get(self, request):
         date = request.query_params.get('date')
         if not date:
-            return Response({"error": "날짜가 필요합니다."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "날짜를 입력해주세요."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         expenses = Expense.objects.filter(date=date, user=request.user)
         serializer = ExpenseSerializer(expenses, many=True)
@@ -41,6 +44,6 @@ class ScanResultExpenseCreateView(APIView):
     def post(self, request):
         serializer = ExpenseSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(user=request.user, is_scan_result=True)
+            serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 

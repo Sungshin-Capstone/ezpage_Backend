@@ -19,28 +19,30 @@ class ReceiptScanView(APIView):
         if not image:
             return Response({'error': '이미지가 필요합니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 임시 저장
         result = ScanResult.objects.create(
             scan_type='receipt',
             image=image,
             extracted_text='',
-            extracted_data={},  # 실제 AI 처리 전이므로 빈 값
+            extracted_data={},
         )
-        # 🔹 여기에 AI 결과가 연동될 자리 (현재는 dummy)
-        dummy_result = {
-            "items": [
-                {"name": "샌드위치", "price": 7.5, "currency": "USD"},
-                {"name": "커피", "price": 3.0, "currency": "USD"}
-            ],
-            "translated": [
-                {"name_kr": "샌드위치", "price_kr": 9900},
-                {"name_kr": "커피", "price_kr": 3900}
-            ],
-            "recommend_payment": "현지 화폐 (USD)로 지불 권장",
-            "image_preview": result.image.url
-        }
 
-        return Response(dummy_result, status=status.HTTP_200_OK)
+        # AI팀 서버로 이미지 전송
+        ai_server_url = 'http://ai-server/scan'  # 🔴 AI팀 서버 주소로 변경 필요
+        files = {'image': (image.name, image, image.content_type)}
+
+        try:
+            ai_response = requests.post(ai_server_url, files=files, timeout=10)  # 10초 제한
+            ai_response.raise_for_status()  # 오류 있으면 예외 발생
+            # AI팀에서 결과(JSON)를 받음
+            ai_result = ai_response.json()
+            #결과를 DB에 저장
+            result.extracted_data = ai_result
+            result.save()
+            # 프론트에 JSON 결과 응답
+            return Response(ai_result, status=status.HTTP_200_OK)
+
+        except requests.RequestException as e:
+            return Response({'error': 'AI 서버와 통신 실패', 'details': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CurrencyScanView(APIView):
