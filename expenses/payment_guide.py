@@ -79,7 +79,7 @@ class IntegratedPaymentSystem:
 
         currency = self.currencies[country_code]
         food_price = self._round(food_price, currency.decimal_places)
-        wallet_total = sum(k * v for k, v in wallet.items())
+        wallet_total = sum(float(k) * v for k, v in wallet.items())
 
         if wallet_total < food_price:
             return {
