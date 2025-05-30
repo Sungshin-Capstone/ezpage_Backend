@@ -15,7 +15,7 @@ class ExpenseSerializer(serializers.ModelSerializer):
     category = serializers.ChoiceField(choices=Expense.CATEGORY_CHOICES)
     is_scan_result = serializers.BooleanField(required=False, default=False)
     time = serializers.SerializerMethodField()
-    amount = serializers.SerializerMethodField()
+    amount = serializers.IntegerField()
 
     class Meta:
         model = Expense
