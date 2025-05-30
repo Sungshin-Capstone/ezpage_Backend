@@ -8,7 +8,7 @@ class Expense(models.Model):
         ('FOOD', '식비'),
         ('TRANSPORT', '교통'),
         ('SHOPPING', '쇼핑'),
-        ('OTHER', '기타'),
+        ('ETC', '기타'),
     ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='expenses')

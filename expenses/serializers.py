@@ -4,17 +4,18 @@ from rest_framework import serializers
 from .models import Expense,Wallet,Trip
 
 class ScanResultExpenseSerializer(serializers.ModelSerializer):
-    currency = serializers.ChoiceField(choices=["KRW", "JPY", "CNY", "USD", "EUR", "GBP"])
+    currency = serializers.ChoiceField(choices=["KRW", "JPY", "CNY", "USD"])
 
     class Meta:
         model = Expense
         fields = ['id', 'amount', 'currency', 'description']
 
 class ExpenseSerializer(serializers.ModelSerializer):
-    currency = serializers.ChoiceField(choices=["KRW", "JPY", "CNY", "USD", "EUR", "GBP"])
+    currency = serializers.ChoiceField(choices=["KRW", "JPY", "CNY", "USD"])
     category = serializers.ChoiceField(choices=Expense.CATEGORY_CHOICES)
     is_scan_result = serializers.BooleanField(required=False, default=False)
     time = serializers.SerializerMethodField()
+    amount = serializers.SerializerMethodField()
 
     class Meta:
         model = Expense
@@ -25,6 +26,9 @@ class ExpenseSerializer(serializers.ModelSerializer):
         if obj.time:
             return obj.time.strftime("%H:%M")
         return None
+
+    def get_amount(self, obj):
+        return int(obj.amount)
 
 
 class WalletScanResultSerializer(serializers.ModelSerializer):
