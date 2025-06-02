@@ -148,17 +148,13 @@ class WalletDeductView(APIView):
         else:
             return Response(serializer.errors, status=400)
 
-class TripListView(generics.ListAPIView):
+class TripListCreateView(generics.ListCreateAPIView):
     serializer_class = TripSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # 로그인한 사용자(user)의 여행만 반환
         return Trip.objects.filter(user=self.request.user)
-
-class TripCreateView(generics.CreateAPIView):
-    queryset = Trip.objects.all()
-    serializer_class = TripSerializer
-    permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

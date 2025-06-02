@@ -5,7 +5,7 @@ from rest_framework import status
 from ..models import Trip
 from ..serializers import TripSerializer
 
-class TripListView(APIView):
+class TripListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -14,10 +14,8 @@ class TripListView(APIView):
         serializer = TripSerializer(trips, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-class TripCreateView(APIView):
-    permission_classes = [IsAuthenticated]
-
     def post(self, request):
+        # 새 여행 생성
         serializer = TripSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(user=request.user)
