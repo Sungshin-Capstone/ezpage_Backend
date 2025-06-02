@@ -6,6 +6,7 @@ from .views.expense_views import (
     ScanResultExpenseCreateView,
 )
 from .views.trip_views import (
+    TripListView,
     TripCreateView,
     TripDetailView,
 )
@@ -26,6 +27,7 @@ urlpatterns = [
     path('expenses/payment-guide/', PaymentGuideAPIView.as_view(), name='payment-guide'),
     
     # Trip endpoints
+    path('api/v1/trips/', TripListView.as_view(), name='trip-list'),
     path('trips/', TripCreateView.as_view(), name='trip-create'),
     path('trips/<int:pk>/', TripDetailView.as_view(), name='trip-detail'),
     

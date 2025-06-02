@@ -148,6 +148,13 @@ class WalletDeductView(APIView):
         else:
             return Response(serializer.errors, status=400)
 
+class TripListView(generics.ListAPIView):
+    serializer_class = TripSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Trip.objects.filter(user=self.request.user)
+
 class TripCreateView(generics.CreateAPIView):
     queryset = Trip.objects.all()
     serializer_class = TripSerializer
@@ -156,10 +163,11 @@ class TripCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-class TripDetailView(RetrieveUpdateDestroyAPIView):
+class TripDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Trip.objects.all()
     serializer_class = TripSerializer
     permission_classes = [IsAuthenticated]
     lookup_field = 'pk'
+
 
 
