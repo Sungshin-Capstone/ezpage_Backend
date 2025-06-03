@@ -35,6 +35,6 @@ urlpatterns = [
     path('wallet/deduct/', WalletDeductView.as_view(), name='wallet-deduct'),
     
     # Payment Guide endpoints
-    path('expenses/payment-guide/', PaymentGuideView.as_view(), name='payment-guide'),
-    path('expenses/menu-payment/', MenuPaymentView.as_view(), name='menu-payment'),
+    path('expenses/payment_guide/', PaymentGuideView.as_view(), name='payment-guide'),
+    path('expenses/menu_payment/', MenuPaymentView.as_view(), name='menu-payment'),
 ]
