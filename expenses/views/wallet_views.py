@@ -11,18 +11,47 @@ class WalletSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        wallet = Wallet.objects.filter(user=request.user).first()
-        if not wallet:
-            return Response({"error": "지갑을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
-        
-        serializer = WalletSerializer(wallet)
-        data = serializer.data
-        
-        # 지갑 총액 계산 추가
-        data['wallet_total'] = self._calculate_wallet_total(wallet)
-        data['currency_symbol'] = self._get_currency_symbol(wallet.country_code)
-        
-        return Response(data)
+        trip_id = request.query_params.get('trip_id')
+        if not trip_id:
+            return Response(
+                {"error": "여행 ID가 필요합니다."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            trip = Trip.objects.get(id=trip_id, user=request.user)
+            wallets = Wallet.objects.filter(user=request.user, trip=trip)
+            
+            if not wallets.exists():
+                return Response(
+                    {"error": "해당 여행에 대한 지갑을 찾을 수 없습니다."}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # 모든 지갑의 정보를 합산
+            total_amount = Decimal('0')
+            wallet_details = []
+            
+            for wallet in wallets:
+                wallet_total = self._calculate_wallet_total(wallet)
+                total_amount += Decimal(str(wallet_total))
+                
+                wallet_data = WalletSerializer(wallet).data
+                wallet_data['wallet_total'] = wallet_total
+                wallet_data['currency_symbol'] = self._get_currency_symbol(wallet.country_code)
+                wallet_details.append(wallet_data)
+            
+            return Response({
+                'wallets': wallet_details,
+                'total_amount': float(total_amount),
+                'currency_symbol': self._get_currency_symbol(wallets.first().country_code)
+            })
+            
+        except Trip.DoesNotExist:
+            return Response(
+                {"error": "존재하지 않는 여행입니다."}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
     
     def _calculate_wallet_total(self, wallet):
         """지갑의 총 금액 계산"""
@@ -48,17 +77,47 @@ class WalletScanResultView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = WalletSerializer(data=request.data)
-        if serializer.is_valid():
-            wallet = serializer.save(user=request.user)
+        trip_id = request.data.get('trip_id')
+        if not trip_id:
+            return Response(
+                {"error": "여행 ID가 필요합니다."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            trip = Trip.objects.get(id=trip_id, user=request.user)
             
-            # 응답에 총액 정보 추가
-            response_data = serializer.data
-            response_data['wallet_total'] = self._calculate_wallet_total(wallet)
-            response_data['currency_symbol'] = self._get_currency_symbol(wallet.country_code)
+            # 동일한 화폐 단위의 지갑이 이미 존재하는지 확인
+            currency_unit = request.data.get('currency_unit')
+            existing_wallet = Wallet.objects.filter(
+                user=request.user,
+                trip=trip,
+                currency_unit=currency_unit
+            ).first()
             
-            return Response(response_data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            if existing_wallet:
+                # 기존 지갑 업데이트
+                serializer = WalletSerializer(existing_wallet, data=request.data, partial=True)
+            else:
+                # 새 지갑 생성
+                serializer = WalletSerializer(data=request.data)
+            
+            if serializer.is_valid():
+                wallet = serializer.save(user=request.user, trip=trip)
+                
+                # 응답에 총액 정보 추가
+                response_data = serializer.data
+                response_data['wallet_total'] = self._calculate_wallet_total(wallet)
+                response_data['currency_symbol'] = self._get_currency_symbol(wallet.country_code)
+                
+                return Response(response_data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+        except Trip.DoesNotExist:
+            return Response(
+                {"error": "존재하지 않는 여행입니다."}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
     
     def _calculate_wallet_total(self, wallet):
         """지갑의 총 금액 계산"""
@@ -74,7 +133,7 @@ class WalletScanResultView(APIView):
         """국가 코드에 따른 화폐 기호 반환"""
         currency_symbols = {
             'US': '$',
-            'CN': '¥', 
+            'CN': '¥',
             'JP': '¥',
             'KR': '₩'
         }
@@ -135,33 +194,64 @@ class WalletDeductView(APIView):
 
         try:
             trip = Trip.objects.get(pk=trip_id, user=request.user)
-            wallet = Wallet.objects.get(user=request.user)
+            wallets = Wallet.objects.filter(user=request.user, trip=trip)
+            
+            if not wallets.exists():
+                return Response(
+                    {"error": "해당 여행에 대한 지갑 정보가 없습니다."}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
             
             # 차감 전 총액 계산
-            before_total = self._calculate_wallet_total(wallet)
+            before_total = Decimal('0')
+            for wallet in wallets:
+                before_total += Decimal(str(self._calculate_wallet_total(wallet)))
+            
+            # 차감 가능 여부 확인
+            total_deduction = Decimal('0')
+            for deduction in deductions:
+                currency_unit = Decimal(str(deduction.get('currency_unit', 0)))
+                quantity = Decimal(str(deduction.get('quantity', 0)))
+                total_deduction += currency_unit * quantity
+            
+            if total_deduction > before_total:
+                return Response(
+                    {"error": "차감할 금액이 지갑 잔액을 초과합니다."}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             
             # Process deductions
             for deduction in deductions:
                 currency_unit = deduction.get('currency_unit')
                 quantity = deduction.get('quantity')
                 if currency_unit and quantity:
-                    # Update wallet balance
-                    wallet.update_balance(currency_unit, -quantity)
+                    wallet = wallets.filter(currency_unit=currency_unit).first()
+                    if wallet:
+                        # Update wallet balance
+                        wallet.update_balance(currency_unit, -quantity)
             
             # 차감 후 총액 계산
-            after_total = self._calculate_wallet_total(wallet)
+            after_total = Decimal('0')
+            for wallet in wallets:
+                after_total += Decimal(str(self._calculate_wallet_total(wallet)))
             
             return Response({
                 "message": "지갑에서 금액이 차감되었습니다.",
-                "before_total": before_total,
-                "after_total": after_total,
-                "deducted_amount": before_total - after_total,
-                "currency_symbol": self._get_currency_symbol(wallet.country_code)
+                "before_total": float(before_total),
+                "after_total": float(after_total),
+                "deducted_amount": float(before_total - after_total),
+                "currency_symbol": self._get_currency_symbol(wallets.first().country_code)
             })
-        except (Trip.DoesNotExist, Wallet.DoesNotExist):
+            
+        except Trip.DoesNotExist:
             return Response(
-                {"error": "여행 또는 지갑을 찾을 수 없습니다."}, 
+                {"error": "존재하지 않는 여행입니다."}, 
                 status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"차감 처리 중 오류가 발생했습니다: {str(e)}"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
     def _calculate_wallet_total(self, wallet):

@@ -2,6 +2,7 @@
 
 from django.db import models
 from django.conf import settings
+from decimal import Decimal, InvalidOperation
 
 class Expense(models.Model):
     CATEGORY_CHOICES = [
@@ -51,15 +52,18 @@ class Wallet(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.trip} - {self.currency_unit}{self.currency_code} x {self.quantity}"
 
-    def get_wallet_dict(self):
-        """지갑 정보를 딕셔너리로 반환"""
-        return {
-            'id': self.id,
-            'currency_unit': self.currency_unit,
-            'quantity': self.quantity,
-            'country_code': self.country_code,
-            'currency_code': self.currency_code,
-        }
+    def _calculate_wallet_total(self, wallet):
+        try:
+            denomination = wallet.currency_unit
+            quantity = wallet.quantity
+
+            if denomination is None or quantity is None:
+                return Decimal('0')
+
+            return Decimal(str(denomination)) * Decimal(str(quantity))
+        except (decimal.InvalidOperation, ValueError) as e:
+            print(f"🔴 Decimal conversion error: denomination={denomination}, quantity={quantity}, error={e}")
+            return Decimal('0')
 
 
 class Trip(models.Model):
