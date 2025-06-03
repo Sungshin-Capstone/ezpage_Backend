@@ -8,6 +8,16 @@ from ..models import Wallet, Trip
 from ..serializers import WalletSerializer
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from decimal import Decimal
+from django.utils import timezone
+from ..models import Wallet, Trip
+from ..serializers import WalletSerializer
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+
 class WalletSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -24,29 +34,32 @@ class WalletSummaryView(APIView):
             wallets = Wallet.objects.filter(user=request.user, trip=trip)
             if not wallets.exists():
                 return Response(
-                    {"error": "해당 여행에 대한 지갑을 찾을 수 없습니다."},
+                    {"error": "해당 여행에 대한 지갑 정보가 없습니다."},
                     status=status.HTTP_404_NOT_FOUND
                 )
 
-            # 총 금액: 단위 * 개수로 계산
             total_amount = Decimal('0')
-            for wallet in wallets:
-                total_amount += Decimal(wallet.currency_unit) * Decimal(wallet.quantity)
-
-            # 각 화폐단위별 세부정보
+            converted_total_krw = Decimal('0')
+            currency_code = None
             currency_details = []
+
             for wallet in wallets:
-                if wallet.quantity > 0:
-                    currency_details.append({
-                        "currency_unit": wallet.currency_unit,
-                        "quantity": wallet.quantity
-                    })
+                if wallet.quantity <= 0:
+                    continue
+                amount = Decimal(wallet.currency_unit) * Decimal(wallet.quantity)
+                total_amount += amount
+                converted_total_krw += wallet.converted_total_krw or 0
+                currency_code = wallet.currency_code
+                currency_details.append({
+                    "currency_unit": wallet.currency_unit,
+                    "quantity": wallet.quantity
+                })
 
             return Response({
                 "total_amount": float(total_amount),
-                "currency_code": trip.currency_code,
-                "exchange_rate_to_krw": float(trip.exchange_rate_to_krw),
-                "exchange_rate_unit": "KRW",
+                "currency_code": currency_code,
+                "converted_total_krw": float(converted_total_krw),
+                "converted_currency_code": "KRW",
                 "currency_details": currency_details
             }, status=status.HTTP_200_OK)
 
@@ -56,13 +69,13 @@ class WalletSummaryView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-    
     def _calculate_wallet_total(self, wallet):
         total = Decimal('0')
         wallet_dict = wallet.get_wallet_dict()
         for denomination, quantity in wallet_dict.items():
             total += Decimal(str(denomination)) * Decimal(str(quantity))
         return float(total)
+
     
     def _get_currency_symbol(self, country_code):
         currency_symbols = {
