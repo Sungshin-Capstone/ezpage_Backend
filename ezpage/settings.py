@@ -81,7 +81,6 @@ WSGI_APPLICATION = 'ezpage.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
-import dj_database_url
 from dotenv import load_dotenv
 import os
 load_dotenv()
