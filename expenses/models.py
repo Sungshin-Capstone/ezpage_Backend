@@ -3,7 +3,6 @@
 from django.db import models
 from django.conf import settings
 from decimal import Decimal, InvalidOperation
-from .services import ExchangeRateService
 
 class Expense(models.Model):
     CATEGORY_CHOICES = [
@@ -66,7 +65,7 @@ class Wallet(models.Model):
             'quantity': self.quantity,
             'currency_code': self.currency_code,
             'total_amount': float(self.total_amount),
-            'converted_total_krw': float(self.converted_total_krw)
+            'converted_total_krw': float(self.converted_total_krw or 0)  # 안전 처리 추가
         }
 
     class Meta:
@@ -92,7 +91,6 @@ class Trip(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     total_wallet_amount = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0'))
-    exchange_rate_to_krw = models.DecimalField(max_digits=15, decimal_places=4, default=1.0, verbose_name="KRW 환율")  # KRW 대비 환율
 
     class Meta:
         ordering = ['-start_date']
@@ -109,9 +107,4 @@ class Trip(models.Model):
             'KR': 'KRW'
         }
         self.currency_code = currency_mapping.get(self.country, 'KRW')
-        
-        # 환율 정보 가져오기
-        exchange_rate_info = ExchangeRateService.get_exchange_rate(self.currency_code)
-        self.exchange_rate_to_krw = exchange_rate_info['rate']
-        
         super().save(*args, **kwargs)
