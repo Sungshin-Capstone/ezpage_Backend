@@ -97,7 +97,11 @@ class WalletScanResultView(APIView):
         detected = request.data.get("detected", {})
         converted_total_krw = request.data.get("converted_total_krw")
 
-        if not all([trip_id, total, currency_symbol, detected, converted_total_krw]):
+        # 필수 필드 검증
+        if (trip_id is None or 
+            total is None or 
+            currency_symbol is None or 
+            converted_total_krw is None):
             return Response(
                 {"error": "필수 정보가 누락되었습니다."},
                 status=status.HTTP_400_BAD_REQUEST
@@ -111,11 +115,11 @@ class WalletScanResultView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # 통화 코드 매핑
+        # 통화 코드 매핑 (¥ 중복 문제 해결)
         currency_mapping = {
             '$': 'USD',
-            '¥': 'JPY',
-            '¥': 'CNY',
+            '¥': 'JPY',  # 일본 엔
+            '￥': 'CNY',  # 중국 위안 (다른 유니코드)
             '₩': 'KRW'
         }
         currency_code = currency_mapping.get(currency_symbol, 'USD')
@@ -125,39 +129,65 @@ class WalletScanResultView(APIView):
         Wallet.objects.filter(user=request.user, trip=trip, currency_code=currency_code).delete()
 
         saved_items = {}
-        for key, quantity in detected.items():
-            if quantity <= 0:
-                continue
+        
+        # detected 딕셔너리가 비어있지 않은 경우에만 처리
+        if detected:
+            for key, quantity in detected.items():
+                if quantity <= 0:
+                    continue
 
-            # 통화 단위 추출 (예: "USD_5dollar" -> 5)
-            unit_str = ''.join(filter(str.isdigit, key.split('_')[1]))
-            if not unit_str:
-                continue
+                try:
+                    # 키 형식 검증: "USD_5dollar" 형태
+                    if '_' not in key:
+                        continue
+                    
+                    parts = key.split('_')
+                    if len(parts) < 2:
+                        continue
+                    
+                    # 통화 단위 추출 개선
+                    unit_part = parts[1]  # "5dollar" 부분
+                    unit_str = ''.join(filter(str.isdigit, unit_part))
+                    
+                    if not unit_str:
+                        continue
 
-            currency_unit = int(unit_str)
-            
-            # 새로운 지갑 생성
-            wallet = Wallet.objects.create(
-                user=request.user,
-                trip=trip,
-                country_code=country_code,
-                currency_code=currency_code,
-                currency_unit=currency_unit,
-                quantity=quantity,
-                converted_total_krw=Decimal(str(converted_total_krw))
-            )
-            
-            saved_items[key] = quantity
+                    currency_unit = int(unit_str)
+                    
+                    # 새로운 지갑 생성
+                    wallet = Wallet.objects.create(
+                        user=request.user,
+                        trip=trip,
+                        country_code=country_code,
+                        currency_code=currency_code,
+                        currency_unit=currency_unit,
+                        quantity=quantity,
+                        converted_total_krw=Decimal(str(converted_total_krw))
+                    )
+                    
+                    saved_items[key] = quantity
+                    
+                except (ValueError, TypeError) as e:
+                    # 개별 아이템 처리 실패 시 해당 아이템만 건너뛰고 계속 진행
+                    continue
 
         # 여행의 총 지갑 금액 업데이트
-        trip.total_wallet_amount = Decimal(str(total))
-        trip.save()
+        try:
+            trip.total_wallet_amount = Decimal(str(total))
+            trip.save()
+        except (ValueError, TypeError):
+            return Response(
+                {"error": "총 금액 형식이 올바르지 않습니다."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         return Response({
             "message": "지갑에 감지된 화폐 정보가 저장되었습니다.",
             "saved_items": saved_items,
             "total_amount": float(total),
-            "converted_total_krw": float(converted_total_krw)
+            "converted_total_krw": float(converted_total_krw),
+            "currency_code": currency_code,
+            "country_code": country_code
         }, status=status.HTTP_200_OK)
 
     def _get_country_code(self, currency_code):
