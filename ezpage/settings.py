@@ -89,14 +89,8 @@ load_dotenv()
 DATABASES = {
     'default': dj_database_url.config(
         default=os.getenv("DATABASE_URL"),
-        conn_max_age=60,  # 600에서 60으로 줄임 (연결 유지 시간 단축)
-        ssl_require=True,
-        conn_health_checks=True,  # 연결 상태 체크 활성화
-        options={
-            'MAX_CONNS': 20,  # 최대 연결 수 제한
-            'connect_timeout': 10,  # 연결 타임아웃 설정
-            'application_name': 'ezpage_backend',  # 애플리케이션 식별용
-        }
+        conn_max_age=600,
+        ssl_require=True
     )
 }
 
