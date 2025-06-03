@@ -1,6 +1,6 @@
 **ezpage에서 백엔드파트를 맡은 성신여대 AI융합학부 김예준**입니다.  
 ---
-<img src="YEJUNKIM.png" width="100"/>
+<img src="C:\Users\admin\Desktop\YEJUNKIM.png"" width="100"/>
 <p align="center">20221336 김예준</p>
 ---
 ### 🌟 주요 기능
