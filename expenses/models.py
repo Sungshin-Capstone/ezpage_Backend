@@ -34,6 +34,7 @@ class Wallet(models.Model):
     currency_unit = models.PositiveIntegerField()
     quantity = models.PositiveIntegerField()
     total_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    exchange_rate = models.DecimalField(max_digits=15, decimal_places=4, default=1.0)  # Default to 1.0 for base currency
     created_at = models.DateTimeField(auto_now_add=True)
 
     def update_balance(self, currency_unit, delta_quantity):
@@ -55,11 +56,17 @@ class Wallet(models.Model):
 
     def calculate_total_amount(self):
         """총액을 계산하고 저장합니다."""
-        self.total_amount = Decimal(str(self.currency_unit)) * Decimal(str(self.quantity))
+        self.total_amount = Decimal(str(self.currency_unit)) * Decimal(str(self.quantity)) * Decimal(str(self.exchange_rate))
 
     def get_wallet_dict(self):
         # 이 지갑 객체의 권종과 수량을 딕셔너리로 반환
-        return {self.currency_unit: self.quantity}
+        return {
+            'currency_unit': self.currency_unit,
+            'quantity': self.quantity,
+            'currency_code': self.currency_code,
+            'exchange_rate': float(self.exchange_rate),
+            'total_amount': float(self.total_amount)
+        }
 
     class Meta:
         unique_together = ('user', 'trip', 'currency_unit')
