@@ -127,28 +127,32 @@ class WalletScanResultView(APIView):
                         continue
                     currency_unit = int(unit_str)
 
+                    # 새로운 지갑 생성
                     wallet = Wallet.objects.create(
                         user=request.user,
                         trip=trip,
                         country_code=country_code,
                         currency_code=currency_code,
                         currency_unit=currency_unit,
-                        quantity=quantity
+                        quantity=quantity,
+                        # 개별 Wallet의 converted_total_krw는 계산하여 저장
+                        converted_total_krw=Decimal(str(currency_unit)) * Decimal(str(quantity)) * Decimal(str(trip.exchange_rate_to_krw))
                     )
                     saved_items[key] = quantity
+                    
                 except (ValueError, TypeError):
                     continue
 
         try:
+            # Trip의 total_wallet_amount와 converted_total_krw를 스캐너 결과의 총액으로 업데이트
             trip.total_wallet_amount = Decimal(str(total))
-            trip.converted_total_krw = Decimal(str(converted_total_krw))  # ← 여기!
+            trip.converted_total_krw = Decimal(str(converted_total_krw))  # 스캐너에서 제공한 총 환산 금액 사용
             trip.save()
         except (ValueError, TypeError):
             return Response(
                 {"error": "총 금액 형식이 올바르지 않습니다."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
 
         return Response({
             "message": "지갑에 감지된 화폐 정보가 저장되었습니다.",
