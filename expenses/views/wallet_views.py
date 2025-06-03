@@ -4,6 +4,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from ..models import Wallet, Trip
 from ..serializers import WalletSerializer
+from django.db import models
+from collections import OrderedDict
+
 
 class WalletSummaryView(APIView):
     permission_classes = [IsAuthenticated]
@@ -12,8 +15,20 @@ class WalletSummaryView(APIView):
         wallet = Wallet.objects.filter(user=request.user).first()
         if not wallet:
             return Response({"error": "지갑을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
-        serializer = WalletSerializer(wallet)
-        return Response(serializer.data)
+        serializer = WalletSerializer(wallet.first())
+
+        # 전체 quantity 합산
+        wallets = Wallet.objects.filter(user=request.user)
+        total_quantity = wallets.aggregate(total=models.Sum('quantity'))['total'] or 0
+
+        data = serializer.data
+        ordered_data = OrderedDict()
+        for key in data:
+            ordered_data[key] = data[key]
+            if key == "trip_id":
+                ordered_data["total_quantity"] = total_quantity
+
+        return Response(ordered_data)
 
 class WalletScanResultView(APIView):
     permission_classes = [IsAuthenticated]
