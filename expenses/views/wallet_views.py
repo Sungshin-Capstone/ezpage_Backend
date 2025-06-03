@@ -15,50 +15,47 @@ class WalletSummaryView(APIView):
         trip_id = request.query_params.get('trip_id')
         if not trip_id:
             return Response(
-                {"error": "여행 ID가 필요합니다."}, 
+                {"error": "여행 ID가 필요합니다."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
             trip = Trip.objects.get(id=trip_id, user=request.user)
             wallets = Wallet.objects.filter(user=request.user, trip=trip)
-            
             if not wallets.exists():
                 return Response(
-                    {"error": "해당 여행에 대한 지갑을 찾을 수 없습니다."}, 
+                    {"error": "해당 여행에 대한 지갑을 찾을 수 없습니다."},
                     status=status.HTTP_404_NOT_FOUND
                 )
-            
-            base_currency = trip.currency_code
-            base_country = trip.country
-            total_amount = sum(wallet.total_amount for wallet in wallets)
-            total_amount_krw = total_amount * Decimal(str(trip.exchange_rate_to_krw))
-            
+
+            # 총 금액: 단위 * 개수로 계산
+            total_amount = Decimal('0')
+            for wallet in wallets:
+                total_amount += Decimal(wallet.currency_unit) * Decimal(wallet.quantity)
+
+            # 각 화폐단위별 세부정보
             currency_details = []
             for wallet in wallets:
                 if wallet.quantity > 0:
                     currency_details.append({
-                        'currency_unit': wallet.currency_unit,
-                        'quantity': wallet.quantity,
-                        'total_amount': float(wallet.total_amount),
-                        'currency_symbol': self._get_currency_symbol(wallet.country_code)
+                        "currency_unit": wallet.currency_unit,
+                        "quantity": wallet.quantity
                     })
-            
+
             return Response({
-                'message': '지갑 총액 조회 성공',
-                'total_amount': float(total_amount),
-                'total_amount_krw': float(total_amount_krw),
-                'currency_code': base_currency,
-                'currency_symbol': self._get_currency_symbol(base_country),
-                'exchange_rate_to_krw': float(trip.exchange_rate_to_krw),
-                'currency_details': currency_details
-            })
-            
+                "total_amount": float(total_amount),
+                "currency_code": trip.currency_code,
+                "exchange_rate_to_krw": float(trip.exchange_rate_to_krw),
+                "exchange_rate_unit": "KRW",
+                "currency_details": currency_details
+            }, status=status.HTTP_200_OK)
+
         except Trip.DoesNotExist:
             return Response(
-                {"error": "존재하지 않는 여행입니다."}, 
+                {"error": "존재하지 않는 여행입니다."},
                 status=status.HTTP_404_NOT_FOUND
             )
+
     
     def _calculate_wallet_total(self, wallet):
         total = Decimal('0')
