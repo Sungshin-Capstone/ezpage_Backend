@@ -108,7 +108,6 @@ class WalletScanResultView(APIView):
                 else:
                     continue  # 필요시 다른 화폐도 추가
 
-                # 같은 여행, 같은 화폐 단위의 지갑이 있으면 수량 누적, 없으면 새로 생성
                 wallet, created = Wallet.objects.get_or_create(
                     user=request.user,
                     trip=trip,
@@ -128,6 +127,9 @@ class WalletScanResultView(APIView):
             import os
             if os.path.exists(temp_path):
                 os.remove(temp_path)
+
+    def get(self, request):
+        return Response({"error": "이 엔드포인트는 POST(이미지 업로드 및 저장)만 지원합니다."}, status=405)
 
 class WalletUpdateView(APIView):
     permission_classes = [IsAuthenticated]
