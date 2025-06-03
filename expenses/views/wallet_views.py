@@ -12,10 +12,10 @@ class WalletSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        wallet = Wallet.objects.filter(user=request.user).first()
+        wallet = Wallet.objects.filter(user=request.user)()
         if not wallet:
             return Response({"error": "지갑을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
-        serializer = WalletSerializer(wallet.first())
+        serializer = WalletSerializer(wallet())
 
         # 전체 quantity 합산
         wallets = Wallet.objects.filter(user=request.user)
@@ -36,9 +36,16 @@ class WalletScanResultView(APIView):
     def post(self, request):
         serializer = WalletSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(user=request.user)
+            trip_id = request.data.get('trip_id')
+            try:
+                trip = Trip.objects.get(id=trip_id)
+            except Trip.DoesNotExist:
+                return Response({'error': '여행(trip)을 찾을 수 없습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            serializer.save(user=request.user, trip=trip)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class WalletUpdateView(APIView):
     permission_classes = [IsAuthenticated]
