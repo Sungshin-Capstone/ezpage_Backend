@@ -19,8 +19,7 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/', include('accounts.urls')),
-    path('api/v1/', include('expenses.urls')),
-    path('api/v1/', include('scanner.urls')),
+    path('api/v1/', include('expenses.urls'))
 ]
 
 from django.conf import settings
