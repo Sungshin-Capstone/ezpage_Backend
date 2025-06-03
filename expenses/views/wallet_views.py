@@ -32,15 +32,16 @@ class WalletSummaryView(APIView):
             # 모든 지갑의 total_amount 합산
             total_amount = sum(wallet.total_amount for wallet in wallets)
             
+            # KRW로 환산된 총액 계산
+            total_amount_krw = total_amount * Decimal(str(trip.exchange_rate_to_krw))
+            
             # 각 화폐별 상세 정보 수집
             currency_details = []
             for wallet in wallets:
                 if wallet.quantity > 0:  # 수량이 있는 경우만 포함
                     currency_details.append({
-                        'currency_code': wallet.currency_code,
                         'currency_unit': wallet.currency_unit,
                         'quantity': wallet.quantity,
-                        'exchange_rate': float(wallet.exchange_rate),
                         'total_amount': float(wallet.total_amount),
                         'currency_symbol': self._get_currency_symbol(wallet.country_code)
                     })
@@ -48,7 +49,10 @@ class WalletSummaryView(APIView):
             return Response({
                 'message': '지갑 총액 조회 성공',
                 'total_amount': float(total_amount),
-                'currency_symbol': self._get_currency_symbol(wallets.first().country_code),
+                'total_amount_krw': float(total_amount_krw),
+                'currency_code': trip.currency_code,
+                'currency_symbol': self._get_currency_symbol(trip.country),
+                'exchange_rate_to_krw': float(trip.exchange_rate_to_krw),
                 'currency_details': currency_details
             })
             

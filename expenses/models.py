@@ -34,7 +34,6 @@ class Wallet(models.Model):
     currency_unit = models.PositiveIntegerField()
     quantity = models.PositiveIntegerField()
     total_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    exchange_rate = models.DecimalField(max_digits=15, decimal_places=4, default=1.0)  # Default to 1.0 for base currency
     created_at = models.DateTimeField(auto_now_add=True)
 
     def update_balance(self, currency_unit, delta_quantity):
@@ -56,7 +55,7 @@ class Wallet(models.Model):
 
     def calculate_total_amount(self):
         """총액을 계산하고 저장합니다."""
-        self.total_amount = Decimal(str(self.currency_unit)) * Decimal(str(self.quantity)) * Decimal(str(self.exchange_rate))
+        self.total_amount = Decimal(str(self.currency_unit)) * Decimal(str(self.quantity))
 
     def get_wallet_dict(self):
         # 이 지갑 객체의 권종과 수량을 딕셔너리로 반환
@@ -64,7 +63,6 @@ class Wallet(models.Model):
             'currency_unit': self.currency_unit,
             'quantity': self.quantity,
             'currency_code': self.currency_code,
-            'exchange_rate': float(self.exchange_rate),
             'total_amount': float(self.total_amount)
         }
 
@@ -83,14 +81,15 @@ class Trip(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='trips')
     name = models.CharField(max_length=255)
     country = models.CharField(max_length=5, verbose_name="나라")  # 예: 'JP', 'US', 'KR'
+    currency_code = models.CharField(max_length=5, default='KRW', verbose_name="기본 통화")  # 기본 통화 코드
     start_date = models.DateField()
     end_date = models.DateField()
     color = models.CharField(max_length=7, default="#000000", verbose_name="색상")  # Hex color code
     companions = models.PositiveIntegerField(default=1, verbose_name="동행자 수")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    # Add field for total wallet amount
     total_wallet_amount = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0'))
+    exchange_rate_to_krw = models.DecimalField(max_digits=15, decimal_places=4, default=1.0, verbose_name="KRW 환율")  # KRW 대비 환율
 
     class Meta:
         ordering = ['-start_date']
