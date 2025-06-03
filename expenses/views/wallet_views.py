@@ -147,13 +147,12 @@ class WalletScanResultView(APIView):
             return Response(
                 {"error": "총 금액 형식이 올바르지 않습니다."},
                 status=status.HTTP_400_BAD_REQUEST
-            )            )
+            )
 
-
-        rn Response({
-                ": "지갑에 감지된 화폐 정보가 저장되었습니다.",
-                 ems": saved_items,
-            "tota        loat(total),
+        return Response({
+            "message": "지갑에 감지된 화폐 정보가 저장되었습니다.",
+            "saved_items": saved_items,
+            "total_amount": float(total),
             "converted_total_krw": float(converted_total_krw),
             "currency_code": currency_code,
             "country_code": country_code
