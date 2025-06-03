@@ -31,19 +31,13 @@ class WalletSummaryView(APIView):
             
             # 모든 지갑의 정보를 합산
             total_amount = Decimal('0')
-            wallet_details = []
             
             for wallet in wallets:
                 wallet_total = self._calculate_wallet_total(wallet)
                 total_amount += Decimal(str(wallet_total))
-                
-                wallet_data = WalletSerializer(wallet).data
-                wallet_data['wallet_total'] = wallet_total
-                wallet_data['currency_symbol'] = self._get_currency_symbol(wallet.country_code)
-                wallet_details.append(wallet_data)
             
             return Response({
-                'wallets': wallet_details,
+                'message': '지갑 총액 조회 성공',
                 'total_amount': float(total_amount),
                 'currency_symbol': self._get_currency_symbol(wallets.first().country_code)
             })
