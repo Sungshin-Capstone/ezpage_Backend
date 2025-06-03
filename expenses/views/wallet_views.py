@@ -133,8 +133,7 @@ class WalletScanResultView(APIView):
                         country_code=country_code,
                         currency_code=currency_code,
                         currency_unit=currency_unit,
-                        quantity=quantity,
-                        converted_total_krw=Decimal(str(converted_total_krw))
+                        quantity=quantity
                     )
                     saved_items[key] = quantity
                 except (ValueError, TypeError):
@@ -142,13 +141,14 @@ class WalletScanResultView(APIView):
 
         try:
             trip.total_wallet_amount = Decimal(str(total))
-            trip.converted_total_krw = Decimal(str(converted_total_krw))
+            trip.converted_total_krw = Decimal(str(converted_total_krw))  # ← 여기!
             trip.save()
         except (ValueError, TypeError):
             return Response(
                 {"error": "총 금액 형식이 올바르지 않습니다."},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
 
         return Response({
             "message": "지갑에 감지된 화폐 정보가 저장되었습니다.",
