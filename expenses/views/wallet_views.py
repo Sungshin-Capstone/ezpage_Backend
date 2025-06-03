@@ -6,7 +6,7 @@ from rest_framework import status
 from decimal import Decimal
 from ..models import Wallet, Trip
 from ..serializers import WalletSerializer
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 class WalletSummaryView(APIView):
     permission_classes = [IsAuthenticated]
@@ -76,7 +76,7 @@ class WalletSummaryView(APIView):
 
 class WalletScanResultView(APIView):
     permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def post(self, request):
         image = request.FILES.get("money_image")
