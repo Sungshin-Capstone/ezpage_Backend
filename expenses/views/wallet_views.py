@@ -80,9 +80,8 @@ class WalletScanResultView(APIView):
 
     def post(self, request):
         image = request.FILES.get("money_image")
-        trip_id = request.data.get("trip_id")
-        if not image or not trip_id:
-            return Response({"error": "이미지와 여행 ID가 필요합니다."}, status=400)
+        if not image:
+            return Response({"error": "이미지가 필요합니다."}, status=400)
 
         # 임시 파일 저장
         temp_path = f"/tmp/{image.name}"
