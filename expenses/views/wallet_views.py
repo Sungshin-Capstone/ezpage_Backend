@@ -8,16 +8,6 @@ from ..models import Wallet, Trip
 from ..serializers import WalletSerializer
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
-from decimal import Decimal
-from django.utils import timezone
-from ..models import Wallet, Trip
-from ..serializers import WalletSerializer
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-
 class WalletSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -46,8 +36,7 @@ class WalletSummaryView(APIView):
             for wallet in wallets:
                 if wallet.quantity <= 0:
                     continue
-                amount = Decimal(wallet.currency_unit) * Decimal(wallet.quantity)
-                total_amount += amount
+                total_amount += wallet.total_amount or 0
                 converted_total_krw += wallet.converted_total_krw or 0
                 currency_code = wallet.currency_code
                 currency_details.append({
@@ -58,7 +47,7 @@ class WalletSummaryView(APIView):
             return Response({
                 "total_amount": float(total_amount),
                 "currency_code": currency_code,
-                "converted_total_krw": float(trip.converted_total_krw or 0),
+                "converted_total_krw": float(converted_total_krw),
                 "converted_currency_code": "KRW",
                 "currency_details": currency_details
             }, status=status.HTTP_200_OK)
@@ -68,6 +57,7 @@ class WalletSummaryView(APIView):
                 {"error": "존재하지 않는 여행입니다."},
                 status=status.HTTP_404_NOT_FOUND
             )
+
 
     def _calculate_wallet_total(self, wallet):
         total = Decimal('0')
