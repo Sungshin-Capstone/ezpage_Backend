@@ -12,6 +12,12 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 
 from pathlib import Path
 import dj_database_url
+from datetime import timedelta
+from dotenv import load_dotenv
+import os
+
+# Load environment variables
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,7 +32,7 @@ SECRET_KEY = '%28^b6@6=4m@2t^0=f1(t)$&86ozlskz_73_8w(+#926m*4e)s'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -47,7 +53,6 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -81,19 +86,21 @@ WSGI_APPLICATION = 'ezpage.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
-import dj_database_url
-from dotenv import load_dotenv
-import os
-load_dotenv()
-
 DATABASES = {
     'default': dj_database_url.config(
         default=os.getenv("DATABASE_URL"),
-        conn_max_age=600,
-        ssl_require=True
+        conn_max_age=60,  # 연결 유지 시간 단축 (메모리 절약)
+        ssl_require=True,
+        conn_health_checks=True,  # 연결 상태 체크 활성화
     )
 }
 
+# 데이터베이스 연결 최적화 (PostgreSQL용)
+if not DEBUG and 'postgresql' in DATABASES['default'].get('ENGINE', ''):
+    DATABASES['default']['OPTIONS'] = {
+        'MAX_CONNS': 20,  # 최대 연결 수 제한
+        'connect_timeout': 10,  # 연결 타임아웃
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/3.1/ref/settings/#auth-password-validators
@@ -117,7 +124,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/3.1/topics/i18n/
 
-LANGUAGE_CODE = 'ko-kr'
+LANGUAGE_CODE = 'ko'
 
 TIME_ZONE = 'Asia/Seoul'
 
@@ -126,51 +133,6 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
-
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/3.1/howto/static-files/
-
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
-]
-
-import os
-
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
-AUTH_USER_MODEL = 'accounts.User'
-
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-}
-
-from datetime import timedelta
-
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
-    "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": True,
-    "AUTH_HEADER_TYPES": ("Bearer",),
-}
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-import os
-
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
-if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-# settings.py
-
-LANGUAGE_CODE = 'ko'
-USE_I18N = True
-USE_L10N = True
 
 LANGUAGES = [
     ('en', 'English'),
@@ -181,17 +143,131 @@ LOCALE_PATHS = [
     BASE_DIR / 'locale',
 ]
 
-ALLOWED_HOSTS = ['*']
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React 개발 서버 주소
+
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/3.1/howto/static-files/
+
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
 ]
 
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# User model
+AUTH_USER_MODEL = 'accounts.User'
+
+# REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',  # 선택 사항
+        'rest_framework.permissions.IsAuthenticated',
     ),
 }
 
+# JWT Settings
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
+# CORS Settings
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # React 개발 서버 주소
+]
+
+# 메모리 사용량 제한 설정
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000  # 필드 수 제한
+
+# 세션 설정 (메모리 절약)
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # 데이터베이스 사용
+SESSION_COOKIE_AGE = 86400  # 1일 (기본값보다 짧게)
+
+# 캐시 설정 (메모리 사용량 제한)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,  # 최대 캐시 엔트리 수 제한
+            'CULL_FREQUENCY': 4,  # 캐시 정리 빈도
+        }
+    }
+}
+
+# 로깅 설정 (메모리 절약을 위해 최소화)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'WARNING' if not DEBUG else 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'file': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR / 'logs' / 'django.log',
+            'maxBytes': 1024*1024*5,  # 5MB
+            'backupCount': 2,
+            'formatter': 'simple',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING' if not DEBUG else 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'WARNING' if not DEBUG else 'INFO',
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['console'] if DEBUG else [],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
+}
+
+# 로그 디렉토리 생성
+log_dir = BASE_DIR / 'logs'
+log_dir.mkdir(exist_ok=True)
+
+# Email backend
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Default primary key field type
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# 추가 메모리 최적화 설정
+if not DEBUG:
+    # 프로덕션에서 템플릿 캐싱 활성화
+    TEMPLATES[0]['OPTIONS']['loaders'] = [
+        ('django.template.loaders.cached.Loader', [
+            'django.template.loaders.filesystem.Loader',
+            'django.template.loaders.app_directories.Loader',
+        ]),
+    ]
+
+    # 정적 파일 압축
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
