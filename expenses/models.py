@@ -33,6 +33,7 @@ class Wallet(models.Model):
     currency_code = models.CharField(max_length=5)
     currency_unit = models.PositiveIntegerField()
     quantity = models.PositiveIntegerField()
+    total_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def update_balance(self, currency_unit, delta_quantity):
@@ -41,6 +42,7 @@ class Wallet(models.Model):
         if self.quantity + delta_quantity < 0:
             raise ValueError(f"{currency_unit} 단위 화폐가 부족합니다.")
         self.quantity += delta_quantity
+        self.calculate_total_amount()
         self.save()
 
     def add_quantity(self, quantity):
@@ -48,7 +50,12 @@ class Wallet(models.Model):
         같은 여행, 같은 화폐 단위의 지갑이면 수량을 누적해서 더합니다.
         """
         self.quantity += quantity
+        self.calculate_total_amount()
         self.save()
+
+    def calculate_total_amount(self):
+        """총액을 계산하고 저장합니다."""
+        self.total_amount = Decimal(str(self.currency_unit)) * Decimal(str(self.quantity))
 
     def get_wallet_dict(self):
         # 이 지갑 객체의 권종과 수량을 딕셔너리로 반환
@@ -61,27 +68,25 @@ class Wallet(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.trip} - {self.currency_unit}{self.currency_code} x {self.quantity}"
 
-    def _calculate_wallet_total(self, wallet):
-        try:
-            denomination = wallet.currency_unit
-            quantity = wallet.quantity
-            if denomination is None or quantity is None:
-                return Decimal('0')
-            return Decimal(str(denomination)) * Decimal(str(quantity))
-        except (decimal.InvalidOperation, ValueError) as e:
-            print(f"🔴 Decimal conversion error: denomination={denomination}, quantity={quantity}, error={e}")
-            return Decimal('0')
-
+    def save(self, *args, **kwargs):
+        self.calculate_total_amount()
+        super().save(*args, **kwargs)
 
 class Trip(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='trips')
-    name = models.CharField(max_length=100, verbose_name="여행 이름")
+    name = models.CharField(max_length=255)
     country = models.CharField(max_length=5, verbose_name="나라")  # 예: 'JP', 'US', 'KR'
-    start_date = models.DateField(verbose_name="시작일")
-    end_date = models.DateField(verbose_name="종료일")
+    start_date = models.DateField()
+    end_date = models.DateField()
     color = models.CharField(max_length=7, default="#000000", verbose_name="색상")  # Hex color code
     companions = models.PositiveIntegerField(default=1, verbose_name="동행자 수")
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    # Add field for total wallet amount
+    total_wallet_amount = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0'))
+
+    class Meta:
+        ordering = ['-start_date']
 
     def __str__(self):
-        return f"{self.user.username}'s trip to {self.country} ({self.start_date} ~ {self.end_date})"
+        return self.name

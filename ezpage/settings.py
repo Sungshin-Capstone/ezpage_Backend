@@ -87,7 +87,7 @@ load_dotenv()
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.getenv("DATABASE_URL"),
+        default=os.getenv("DATABASE_URL", "postgresql://ezpage_db_user:1jZzmiZAwfUC343LunDUh3AjZnMvPgKh@dpg-d0hf77juibrs739mcjcg-a.singapore-postgres.render.com/ezpage_db"),
         conn_max_age=600,
         ssl_require=True
     )

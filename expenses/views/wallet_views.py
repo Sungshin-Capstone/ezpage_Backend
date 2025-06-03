@@ -29,12 +29,8 @@ class WalletSummaryView(APIView):
                     status=status.HTTP_404_NOT_FOUND
                 )
             
-            # 모든 지갑의 정보를 합산
-            total_amount = Decimal('0')
-            
-            for wallet in wallets:
-                wallet_total = self._calculate_wallet_total(wallet)
-                total_amount += Decimal(str(wallet_total))
+            # 모든 지갑의 total_amount 합산
+            total_amount = sum(wallet.total_amount for wallet in wallets)
             
             return Response({
                 'message': '지갑 총액 조회 성공',
@@ -96,7 +92,7 @@ class WalletScanResultView(APIView):
             if not unit_str:
                 continue
 
-            currency_unit = float(unit_str)
+            currency_unit = Decimal(unit_str)
             country_code = self._get_country_code(currency_code)
             if not country_code:
                 continue
@@ -111,17 +107,25 @@ class WalletScanResultView(APIView):
                     "quantity": 0
                 }
             )
-            # add_quantity 메서드가 없다면 아래처럼 직접 누적 가능
+            
+            # add_quantity 메서드를 사용하거나 직접 누적
             wallet.quantity += quantity
             wallet.save()
             saved_items[key] = quantity
 
+        # Calculate and update total wallet amount for the trip
+        total_amount = Decimal('0')
+        wallets_for_trip = Wallet.objects.filter(user=request.user, trip=trip)
+        for wallet in wallets_for_trip:
+             total_amount += Decimal(str(wallet.currency_unit)) * Decimal(str(wallet.quantity))
+        
+        trip.total_wallet_amount = total_amount
+        trip.save()
+
         if saved_items:
-            return Response({"message": "지갑에 감지된 화폐 정보가 저장되었습니다.", "saved_items": saved_items},
-                            status=status.HTTP_200_OK)
+            return Response({"message": "지갑에 감지된 화폐 정보가 저장되었습니다.", "saved_items": saved_items, "total_wallet_amount": float(total_amount)}, status=status.HTTP_200_OK)
         else:
-            return Response({"message": "감지된 화폐 정보가 없습니다.", "saved_items": {}},
-                            status=status.HTTP_200_OK)
+            return Response({"message": "감지된 화폐 정보가 없습니다.", "saved_items": {}, "total_wallet_amount": float(total_amount)}, status=status.HTTP_200_OK)
 
     def _get_country_code(self, currency_code):
         return {
@@ -130,8 +134,6 @@ class WalletScanResultView(APIView):
             "JPY": "JP",
             "CNY": "CN"
         }.get(currency_code, None)
-
-
 
 class WalletUpdateView(APIView):
     permission_classes = [IsAuthenticated]

@@ -15,7 +15,7 @@ from .views.wallet_views import (
     WalletUpdateView,
     WalletDeductView,
 )
-from .views.payment_guide_views import PaymentGuideView, MenuPaymentView
+# from .views.payment_guide_views import PaymentGuideView, MenuPaymentView
 
 urlpatterns = [
     # Expense endpoints
@@ -35,6 +35,6 @@ urlpatterns = [
     path('wallet/deduct/', WalletDeductView.as_view(), name='wallet-deduct'),
     
     # Payment Guide endpoints
-    path('expenses/payment_guide/', PaymentGuideView.as_view(), name='payment-guide'),
-    path('expenses/menu_payment/', MenuPaymentView.as_view(), name='menu-payment'),
+    # path('expenses/payment_guide/', PaymentGuideView.as_view(), name='payment-guide'),
+    # path('expenses/menu_payment/', MenuPaymentView.as_view(), name='menu-payment'),
 ]
