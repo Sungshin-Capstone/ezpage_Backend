@@ -11,8 +11,6 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.conf import settings
 from rest_framework.permissions import IsAuthenticated
-from .ocr_client import send_image_to_ocr
-import requests
 
 class ReceiptScanView(APIView):
     parser_classes = [MultiPartParser]
@@ -80,20 +78,3 @@ class ImageUploadAPIView(APIView):
             "message": "Image uploaded successfully",
             "image_url": image_url
         }, status=201)
-
-class OCRScanView(APIView):
-        permission_classes = [IsAuthenticated]
-
-        def post(self, request):
-            image = request.FILES.get("image")
-            if not image:
-                return Response({"error": "이미지를 업로드해주세요."}, status=400)
-
-            # 임시로 파일 저장
-            with open("/tmp/temp_image.jpg", "wb") as f:
-                for chunk in image.chunks():
-                    f.write(chunk)
-
-            # OCR 서버에 이미지 보내기
-            ocr_result = send_image_to_ocr("/tmp/temp_image.jpg")
-            return Response(ocr_result)
