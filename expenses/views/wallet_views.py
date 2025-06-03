@@ -7,28 +7,37 @@ from ..serializers import WalletSerializer
 from django.db import models
 from collections import OrderedDict
 
+def add_total_quantity_to_data(data, user):
+    from collections import OrderedDict
+    from django.db.models import Sum
+
+    # 전체 quantity 합산
+    wallets = Wallet.objects.filter(user=user)
+    total_quantity = wallets.aggregate(total=Sum('quantity'))['total'] or 0
+
+    # 응답 데이터 순서 지정
+    ordered_data = OrderedDict()
+    for key in data:
+        ordered_data[key] = data[key]
+        if key == "trip_id":
+            ordered_data["total_quantity"] = total_quantity
+    if "trip_id" not in ordered_data:
+        ordered_data["total_quantity"] = total_quantity
+
+    return ordered_data
 
 class WalletSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        wallet = Wallet.objects.filter(user=request.user)()
+        wallet = Wallet.objects.filter(user=request.user).first()
         if not wallet:
             return Response({"error": "지갑을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
-        serializer = WalletSerializer(wallet())
 
-        # 전체 quantity 합산
-        wallets = Wallet.objects.filter(user=request.user)
-        total_quantity = wallets.aggregate(total=models.Sum('quantity'))['total'] or 0
-
-        data = serializer.data
-        ordered_data = OrderedDict()
-        for key in data:
-            ordered_data[key] = data[key]
-            if key == "trip_id":
-                ordered_data["total_quantity"] = total_quantity
-
+        serializer = WalletSerializer(wallet)
+        ordered_data = add_total_quantity_to_data(serializer.data, request.user)
         return Response(ordered_data)
+
 
 class WalletScanResultView(APIView):
     permission_classes = [IsAuthenticated]
@@ -42,9 +51,12 @@ class WalletScanResultView(APIView):
             except Trip.DoesNotExist:
                 return Response({'error': '여행(trip)을 찾을 수 없습니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            serializer.save(user=request.user, trip=trip)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            wallet = serializer.save(user=request.user, trip=trip)
+            ordered_data = add_total_quantity_to_data(serializer.data, request.user)
+            return Response(ordered_data, status=status.HTTP_201_CREATED)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class WalletUpdateView(APIView):
