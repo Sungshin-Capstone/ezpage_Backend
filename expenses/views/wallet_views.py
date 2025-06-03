@@ -79,97 +79,65 @@ class WalletScanResultView(APIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def post(self, request):
-        # 프론트에서 JSON 데이터를 request.data에서 직접 받아옵니다.
-        # 필요한 데이터는 trip_id와 detected 딕셔너리입니다.
         trip_id = request.data.get("trip_id")
         detected = request.data.get("detected", {})
-        
-        # 필요한 데이터(trip_id, detected)가 있는지 확인
-        if not trip_id or not detected:
-            return Response(
-                {"error": "여행 ID와 감지된 화폐 정보(detected)가 필요합니다."}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
 
-        from ..models import Wallet, Trip
+        if not trip_id or not detected:
+            return Response({"error": "여행 ID와 감지된 화폐 정보(detected)가 필요합니다."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            # 요청한 사용자의 해당 여행 정보를 가져옵니다.
             trip = Trip.objects.get(id=trip_id, user=request.user)
         except Trip.DoesNotExist:
-            return Response(
-                {"error": "존재하지 않는 여행입니다."}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "존재하지 않는 여행입니다."}, status=status.HTTP_404_NOT_FOUND)
 
-        # detected 데이터를 순회하며 지갑에 저장하거나 수량을 누적합니다.
-        # detected 예시: {"USD_5dollar": 1, "USD_20dollar": 1}
         saved_items = {}
         for key, quantity in detected.items():
-            # 화폐 정보 파싱 (예: "USD_5dollar" -> unit=5, code="USD", country="US")
-            currency_unit = None
-            country_code = None
-            currency_code = None
+            parts = key.split("_")
+            if len(parts) != 2 or quantity <= 0:
+                continue
 
-            # 예시 파싱: USD_단위dollar 형태
-            if "_dollar" in key:
-                parts = key.split("_")
-                if len(parts) == 2:
-                    code_part, unit_part = parts
-                    if code_part == "USD":
-                        currency_code = "USD"
-                        country_code = "US" # USD의 국가 코드
-                        try:
-                            currency_unit = float(unit_part.replace("dollar", ""))
-                        except ValueError:
-                            currency_unit = None # 숫자 변환 실패
+            currency_code, unit_with_suffix = parts
+            unit_str = ''.join(filter(str.isdigit, unit_with_suffix))
+            if not unit_str:
+                continue
 
-            # TODO: 필요시 다른 화폐 단위 (KRW_단위won, JPY_단위yen, CNY_단위yuan 등) 파싱 로직 추가
-            # 예: elif "_won" in key: ...
-            # 예: elif "_yen" in key: ...
+            currency_unit = float(unit_str)
+            country_code = self._get_country_code(currency_code)
+            if not country_code:
+                continue
 
-            # 유효한 화폐 정보이고 수량이 0보다 큰 경우에만 처리
-            if currency_unit is not None and country_code is not None and currency_code is not None and quantity > 0:
-                 # 같은 여행, 같은 화폐 단위의 지갑이 있으면 가져오고, 없으면 새로 생성합니다.
-                 # get_or_create는 unique_together = ('user', 'trip', 'currency_unit') 기준으로 동작합니다.
-                wallet, created = Wallet.objects.get_or_create(
-                    user=request.user,
-                    trip=trip,
-                    currency_unit=currency_unit,
-                    defaults={
-                        "country_code": country_code, 
-                        "currency_code": currency_code, 
-                        "quantity": 0 # 새로 생성 시 초기 수량은 0
-                    }
-                )
-                # 기존 지갑이거나 새로 생성된 지갑에 수량을 누적합니다.
-                # Wallet 모델에 add_quantity 메서드가 구현되어 있어야 합니다.
-                try:
-                    wallet.add_quantity(quantity)
-                    saved_items[key] = quantity # 성공적으로 처리된 항목 기록
-                except Exception as e:
-                    # 누적 중 오류 발생 시 (예: add_quantity 문제)
-                    print(f"Error adding quantity to wallet {wallet.id}: {e}")
-                    # 필요에 따라 에러 로깅 또는 응답에 포함
+            wallet, _ = Wallet.objects.get_or_create(
+                user=request.user,
+                trip=trip,
+                currency_unit=currency_unit,
+                defaults={
+                    "country_code": country_code,
+                    "currency_code": currency_code,
+                    "quantity": 0
+                }
+            )
+            # add_quantity 메서드가 없다면 아래처럼 직접 누적 가능
+            wallet.quantity += quantity
+            wallet.save()
+            saved_items[key] = quantity
 
-        # 성공 응답 반환
-        # 실제로 저장된 항목 목록을 포함하여 프론트에 알려줄 수 있습니다.
         if saved_items:
-             return Response(
-                {
-                    "message": "지갑에 감지된 화폐 정보가 저장되었습니다.",
-                    "saved_items": saved_items # 실제로 저장된 항목 목록
-                },
-                status=status.HTTP_200_OK
-            )
+            return Response({"message": "지갑에 감지된 화폐 정보가 저장되었습니다.", "saved_items": saved_items},
+                            status=status.HTTP_200_OK)
         else:
-            # detected 데이터가 비어있거나 유효한 항목이 없는 경우
-            return Response(
-                 {
-                    "message": "감지된 화폐 정보가 없습니다.",
-                    "saved_items": {} 
-                 },
-                 status=status.HTTP_200_OK # 또는 status.HTTP_204_NO_CONTENT
-            )
+            return Response({"message": "감지된 화폐 정보가 없습니다.", "saved_items": {}},
+                            status=status.HTTP_200_OK)
+
+    def _get_country_code(self, currency_code):
+        return {
+            "USD": "US",
+            "KRW": "KR",
+            "JPY": "JP",
+            "CNY": "CN"
+        }.get(currency_code, None)
+
+
 
 class WalletUpdateView(APIView):
     permission_classes = [IsAuthenticated]

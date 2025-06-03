@@ -1,12 +1,11 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework import status
 from .models import ScanResult
 from .serializers import ScanResultSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.conf import settings
@@ -27,11 +26,12 @@ class ReceiptScanView(APIView):
             extracted_data={},
         )
 
-        # AI팀 서버로 이미지 전송
+        # AI팀 서버로 이미지 전송 (이 부분은 OCR 클라이언트를 통하지 않으므로 유지)
         ai_server_url = 'http://ai-server/scan'  # 🔴 AI팀 서버 주소로 변경 필요
         files = {'image': (image.name, image, image.content_type)}
 
         try:
+            # Assuming this communicates directly or uses a different client
             ai_response = requests.post(ai_server_url, files=files, timeout=10)  # 10초 제한
             ai_response.raise_for_status()  # 오류 있으면 예외 발생
             # AI팀에서 결과(JSON)를 받음
