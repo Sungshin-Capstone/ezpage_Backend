@@ -14,11 +14,11 @@ class PaymentGuideView(APIView):
             # 요청 데이터 검증
             trip_id = request.data.get('trip_id')
             amount = request.data.get('amount')
-            country_code = request.data.get('country_code')
+            currency_code = request.data.get('currency')
 
-            if not all([trip_id, amount, country_code]):
+            if not all([trip_id, amount, currency_code]):
                 return Response(
-                    {"error": "여행 ID, 금액, 국가 코드는 필수 입력값입니다."},
+                    {"error": "여행 ID, 금액, 화폐 코드는 필수 입력값입니다."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -55,12 +55,16 @@ class PaymentGuideView(APIView):
 
             # 결제 가이드 처리
             system = IntegratedPaymentSystem()
-            result = system.process_transaction(country_code, amount, wallet_dict)
+            result = system.process_transaction(currency_code, amount, wallet_dict)
+
+            # IntegratedPaymentSystem에서 에러가 반환된 경우 처리
+            if "error" in result:
+                 return Response(result, status=status.HTTP_400_BAD_REQUEST)
 
             # 결과에 추가 정보 포함
             result.update({
                 "trip_id": trip_id,
-                "country_code": country_code,
+                "requested_currency": currency_code,
                 "wallet_details": [
                     {
                         "currency_unit": w.currency_unit,
@@ -80,7 +84,7 @@ class PaymentGuideView(APIView):
             )
         except Exception as e:
             return Response(
-                {"error": "결제 가이드 처리 중 오류가 발생했습니다."},
+                {"error": f"결제 가이드 처리 중 오류가 발생했습니다: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
