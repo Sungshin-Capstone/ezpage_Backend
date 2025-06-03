@@ -14,19 +14,13 @@ class WalletSummaryView(APIView):
     def get(self, request):
         trip_id = request.query_params.get('trip_id')
         if not trip_id:
-            return Response(
-                {"error": "여행 ID가 필요합니다."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "여행 ID가 필요합니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             trip = Trip.objects.get(id=trip_id, user=request.user)
             wallets = Wallet.objects.filter(user=request.user, trip=trip)
             if not wallets.exists():
-                return Response(
-                    {"error": "해당 여행에 대한 지갑 정보가 없습니다."},
-                    status=status.HTTP_404_NOT_FOUND
-                )
+                return Response({"error": "해당 여행에 대한 지갑 정보가 없습니다."}, status=status.HTTP_404_NOT_FOUND)
 
             total_amount = Decimal('0')
             converted_total_krw = Decimal('0')
@@ -36,15 +30,14 @@ class WalletSummaryView(APIView):
             for wallet in wallets:
                 if wallet.quantity <= 0:
                     continue
-                print(f"[DEBUG] Wallet: {wallet.currency_unit} x {wallet.quantity} = {wallet.total_amount}, converted: {wallet.converted_total_krw}")
-                total_amount = sum(Decimal(w.currency_unit) * w.quantity for w in wallets if w.quantity > 0)
-                converted_total_krw = sum(w.converted_total_krw or 0 for w in wallets if w.quantity > 0)
+                amount = Decimal(wallet.currency_unit) * Decimal(wallet.quantity)
+                total_amount += amount
+                converted_total_krw += wallet.converted_total_krw or 0
                 currency_code = wallet.currency_code
                 currency_details.append({
                     "currency_unit": wallet.currency_unit,
                     "quantity": wallet.quantity
                 })
-
 
             return Response({
                 "total_amount": float(total_amount),
@@ -55,10 +48,8 @@ class WalletSummaryView(APIView):
             }, status=status.HTTP_200_OK)
 
         except Trip.DoesNotExist:
-            return Response(
-                {"error": "존재하지 않는 여행입니다."},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "존재하지 않는 여행입니다."}, status=status.HTTP_404_NOT_FOUND)
+
 
 
     def _calculate_wallet_total(self, wallet):
