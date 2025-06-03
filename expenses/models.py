@@ -51,6 +51,16 @@ class Wallet(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.trip} - {self.currency_unit}{self.currency_code} x {self.quantity}"
 
+    def get_wallet_dict(self):
+        """지갑 정보를 딕셔너리로 반환"""
+        return {
+            'id': self.id,
+            'currency_unit': self.currency_unit,
+            'quantity': self.quantity,
+            'country_code': self.country_code,
+            'currency_code': self.currency_code,
+        }
+
 
 class Trip(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='trips')

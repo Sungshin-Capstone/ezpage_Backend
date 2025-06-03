@@ -47,15 +47,17 @@ class WalletScanResultSerializer(serializers.ModelSerializer):
         except Trip.DoesNotExist:
             raise serializers.ValidationError({"trip_id": "존재하지 않는 여행입니다."})
 
-        # validated_data에 trip 추가
-        validated_data['trip'] = trip
-        validated_data['user'] = user
-
+        # validated_data를 수정하지 말고, defaults만 명시적으로 설정
         wallet, created = Wallet.objects.update_or_create(
             user=user,
             trip=trip,
             currency_unit=validated_data['currency_unit'],
-            defaults=validated_data  # 모든 필드를 defaults에 포함
+            defaults={
+                "country_code": validated_data["country_code"],
+                "currency_code": validated_data["currency_code"],
+                "quantity": validated_data["quantity"],
+                # user와 trip은 조건절에 이미 있으므로 defaults에서 제외
+            }
         )
         return wallet
 
