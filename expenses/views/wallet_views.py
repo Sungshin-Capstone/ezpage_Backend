@@ -7,22 +7,19 @@ from ..serializers import WalletSerializer
 from django.db import models
 from collections import OrderedDict
 
-def add_total_quantity_to_data(data, user):
-    from collections import OrderedDict
-    from django.db.models import Sum
-
-    # 전체 quantity 합산
+def add_total_value_to_data(data, user):
+    # 사용자 지갑의 모든 (currency_unit * quantity) 합산
     wallets = Wallet.objects.filter(user=user)
-    total_quantity = wallets.aggregate(total=Sum('quantity'))['total'] or 0
+    total_value = sum(wallet.currency_unit * wallet.quantity for wallet in wallets)
 
     # 응답 데이터 순서 지정
     ordered_data = OrderedDict()
     for key in data:
         ordered_data[key] = data[key]
         if key == "trip_id":
-            ordered_data["total_quantity"] = total_quantity
+            ordered_data["total_value"] = total_value
     if "trip_id" not in ordered_data:
-        ordered_data["total_quantity"] = total_quantity
+        ordered_data["total_value"] = total_value
 
     return ordered_data
 
@@ -35,9 +32,8 @@ class WalletSummaryView(APIView):
             return Response({"error": "지갑을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = WalletSerializer(wallet)
-        ordered_data = add_total_quantity_to_data(serializer.data, request.user)
+        ordered_data = add_total_value_to_data(serializer.data, request.user)
         return Response(ordered_data)
-
 
 class WalletScanResultView(APIView):
     permission_classes = [IsAuthenticated]
@@ -51,13 +47,26 @@ class WalletScanResultView(APIView):
             except Trip.DoesNotExist:
                 return Response({'error': '여행(trip)을 찾을 수 없습니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            wallet = serializer.save(user=request.user, trip=trip)
-            ordered_data = add_total_quantity_to_data(serializer.data, request.user)
+            currency_unit = request.data.get('currency_unit')
+            quantity = request.data.get('quantity')
+
+            # 이미 지갑이 있으면 업데이트, 없으면 새로 생성
+            wallet, created = Wallet.objects.get_or_create(
+                user=request.user,
+                trip=trip,
+                currency_unit=currency_unit,
+                defaults={'quantity': quantity}
+            )
+
+            if not created:
+                wallet.quantity += quantity
+                wallet.save()
+
+            serializer = WalletSerializer(wallet)
+            ordered_data = add_total_value_to_data(serializer.data, request.user)
             return Response(ordered_data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 
 class WalletUpdateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -68,10 +77,12 @@ class WalletUpdateView(APIView):
             serializer = WalletSerializer(wallet, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
-                return Response(serializer.data)
+                ordered_data = add_total_value_to_data(serializer.data, request.user)
+                return Response(ordered_data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Wallet.DoesNotExist:
             return Response({"error": "지갑을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+
 
 class WalletDeductView(APIView):
     permission_classes = [IsAuthenticated]
