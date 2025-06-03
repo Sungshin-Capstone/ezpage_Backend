@@ -3,6 +3,7 @@
 from django.db import models
 from django.conf import settings
 from decimal import Decimal, InvalidOperation
+from .services import ExchangeRateService
 
 class Expense(models.Model):
     CATEGORY_CHOICES = [
@@ -34,6 +35,7 @@ class Wallet(models.Model):
     currency_unit = models.PositiveIntegerField()
     quantity = models.PositiveIntegerField()
     total_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    converted_total_krw = models.DecimalField(max_digits=15, decimal_places=2, default=0)  # KRW로 환산된 총액
     created_at = models.DateTimeField(auto_now_add=True)
 
     def update_balance(self, currency_unit, delta_quantity):
@@ -63,7 +65,8 @@ class Wallet(models.Model):
             'currency_unit': self.currency_unit,
             'quantity': self.quantity,
             'currency_code': self.currency_code,
-            'total_amount': float(self.total_amount)
+            'total_amount': float(self.total_amount),
+            'converted_total_krw': float(self.converted_total_krw)
         }
 
     class Meta:
@@ -96,3 +99,19 @@ class Trip(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        # 국가 코드에 따른 기본 통화 설정
+        currency_mapping = {
+            'US': 'USD',
+            'JP': 'JPY',
+            'CN': 'CNY',
+            'KR': 'KRW'
+        }
+        self.currency_code = currency_mapping.get(self.country, 'KRW')
+        
+        # 환율 정보 가져오기
+        exchange_rate_info = ExchangeRateService.get_exchange_rate(self.currency_code)
+        self.exchange_rate_to_krw = exchange_rate_info['rate']
+        
+        super().save(*args, **kwargs)

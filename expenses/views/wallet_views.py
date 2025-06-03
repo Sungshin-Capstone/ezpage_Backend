@@ -29,6 +29,10 @@ class WalletSummaryView(APIView):
                     status=status.HTTP_404_NOT_FOUND
                 )
             
+            # 여행의 기본 통화 확인
+            base_currency = trip.currency_code
+            base_country = trip.country
+            
             # 모든 지갑의 total_amount 합산
             total_amount = sum(wallet.total_amount for wallet in wallets)
             
@@ -50,8 +54,8 @@ class WalletSummaryView(APIView):
                 'message': '지갑 총액 조회 성공',
                 'total_amount': float(total_amount),
                 'total_amount_krw': float(total_amount_krw),
-                'currency_code': trip.currency_code,
-                'currency_symbol': self._get_currency_symbol(trip.country),
+                'currency_code': base_currency,
+                'currency_symbol': self._get_currency_symbol(base_country),
                 'exchange_rate_to_krw': float(trip.exchange_rate_to_krw),
                 'currency_details': currency_details
             })
@@ -88,62 +92,73 @@ class WalletScanResultView(APIView):
 
     def post(self, request):
         trip_id = request.data.get("trip_id")
+        total = request.data.get("total")
+        currency_symbol = request.data.get("currency_symbol")
         detected = request.data.get("detected", {})
+        converted_total_krw = request.data.get("converted_total_krw")
 
-        if not trip_id or not detected:
-            return Response({"error": "여행 ID와 감지된 화폐 정보(detected)가 필요합니다."},
-                            status=status.HTTP_400_BAD_REQUEST)
+        if not all([trip_id, total, currency_symbol, detected, converted_total_krw]):
+            return Response(
+                {"error": "필수 정보가 누락되었습니다."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
             trip = Trip.objects.get(id=trip_id, user=request.user)
         except Trip.DoesNotExist:
-            return Response({"error": "존재하지 않는 여행입니다."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "존재하지 않는 여행입니다."}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # 통화 코드 매핑
+        currency_mapping = {
+            '$': 'USD',
+            '¥': 'JPY',
+            '¥': 'CNY',
+            '₩': 'KRW'
+        }
+        currency_code = currency_mapping.get(currency_symbol, 'USD')
+        country_code = self._get_country_code(currency_code)
+
+        # 기존 지갑 데이터 삭제 (새로운 스캔 결과로 대체)
+        Wallet.objects.filter(user=request.user, trip=trip, currency_code=currency_code).delete()
 
         saved_items = {}
         for key, quantity in detected.items():
-            parts = key.split("_")
-            if len(parts) != 2 or quantity <= 0:
+            if quantity <= 0:
                 continue
 
-            currency_code, unit_with_suffix = parts
-            unit_str = ''.join(filter(str.isdigit, unit_with_suffix))
+            # 통화 단위 추출 (예: "USD_5dollar" -> 5)
+            unit_str = ''.join(filter(str.isdigit, key.split('_')[1]))
             if not unit_str:
                 continue
 
-            currency_unit = Decimal(unit_str)
-            country_code = self._get_country_code(currency_code)
-            if not country_code:
-                continue
-
-            wallet, _ = Wallet.objects.get_or_create(
+            currency_unit = int(unit_str)
+            
+            # 새로운 지갑 생성
+            wallet = Wallet.objects.create(
                 user=request.user,
                 trip=trip,
+                country_code=country_code,
+                currency_code=currency_code,
                 currency_unit=currency_unit,
-                defaults={
-                    "country_code": country_code,
-                    "currency_code": currency_code,
-                    "quantity": 0
-                }
+                quantity=quantity,
+                converted_total_krw=Decimal(str(converted_total_krw))
             )
             
-            # add_quantity 메서드를 사용하거나 직접 누적
-            wallet.quantity += quantity
-            wallet.save()
             saved_items[key] = quantity
 
-        # Calculate and update total wallet amount for the trip
-        total_amount = Decimal('0')
-        wallets_for_trip = Wallet.objects.filter(user=request.user, trip=trip)
-        for wallet in wallets_for_trip:
-             total_amount += Decimal(str(wallet.currency_unit)) * Decimal(str(wallet.quantity))
-        
-        trip.total_wallet_amount = total_amount
+        # 여행의 총 지갑 금액 업데이트
+        trip.total_wallet_amount = Decimal(str(total))
         trip.save()
 
-        if saved_items:
-            return Response({"message": "지갑에 감지된 화폐 정보가 저장되었습니다.", "saved_items": saved_items, "total_wallet_amount": float(total_amount)}, status=status.HTTP_200_OK)
-        else:
-            return Response({"message": "감지된 화폐 정보가 없습니다.", "saved_items": {}, "total_wallet_amount": float(total_amount)}, status=status.HTTP_200_OK)
+        return Response({
+            "message": "지갑에 감지된 화폐 정보가 저장되었습니다.",
+            "saved_items": saved_items,
+            "total_amount": float(total),
+            "converted_total_krw": float(converted_total_krw)
+        }, status=status.HTTP_200_OK)
 
     def _get_country_code(self, currency_code):
         return {
