@@ -77,7 +77,15 @@ class Wallet(models.Model):
 
     def save(self, *args, **kwargs):
         self.calculate_total_amount()
+        # 환율이 존재할 경우 환산 총액 계산
+        if self.currency_code != 'KRW' and self.total_amount:
+            from .services import ExchangeRateService
+            rate_info = ExchangeRateService.get_exchange_rate(self.currency_code)
+            self.converted_total_krw = self.total_amount * Decimal(str(rate_info['rate']))
+        else:
+            self.converted_total_krw = self.total_amount
         super().save(*args, **kwargs)
+
 
 class Trip(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='trips')
