@@ -92,6 +92,7 @@ class WalletScanResultView(APIView):
 
         try:
             from scanner.ocr_client import send_image_to_ocr
+            # OCR 서버에는 오직 이미지 파일 경로만 전달 (유저 아이디 등 추가 정보 없이)
             ocr_result = send_image_to_ocr(temp_path)
             detected = ocr_result.get("detected", {})
             currency_symbol = ocr_result.get("currency_symbol", "$")
@@ -100,14 +101,12 @@ class WalletScanResultView(APIView):
             trip = Trip.objects.get(id=trip_id, user=request.user)
 
             for key, quantity in detected.items():
-                # 예: key = "USD_5dollar"
                 if "dollar" in key:
                     currency_unit = float(key.split("_")[1].replace("dollar", ""))
                     country_code = "US"
                     currency_code = "USD"
                 else:
-                    continue  # 필요시 다른 화폐도 추가
-
+                    continue
                 wallet, created = Wallet.objects.get_or_create(
                     user=request.user,
                     trip=trip,

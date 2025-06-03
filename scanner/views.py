@@ -1,18 +1,15 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework import status
 from .models import ScanResult
 from .serializers import ScanResultSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.conf import settings
 from rest_framework.permissions import IsAuthenticated
-from .ocr_client import send_image_to_ocr
-import requests
 
 class ReceiptScanView(APIView):
     parser_classes = [MultiPartParser]
@@ -81,40 +78,7 @@ class ImageUploadAPIView(APIView):
             "image_url": image_url
         }, status=201)
 
-class OCRScanView(APIView):
+class WalletScanResultView(APIView):
     permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
-
-    def post(self, request):
-        image = request.FILES.get("file")  # Changed from "image" to "file" to match Postman form-data key
-        if not image:
-            return Response({"error": "이미지를 업로드해주세요."}, status=400)
-
-        # Save image temporarily
-        temp_path = f"/tmp/{image.name}"
-        with open(temp_path, "wb") as f:
-            for chunk in image.chunks():
-                f.write(chunk)
-
-        try:
-            # Send to OCR server
-            ocr_result = send_image_to_ocr(temp_path)
-            
-            # Format response according to requirements
-            response_data = {
-                "total": ocr_result.get("total", 0.0),
-                "currency_symbol": ocr_result.get("currency_symbol", "$"),
-                "detected": ocr_result.get("detected", {}),
-                "converted_total_krw": ocr_result.get("converted_total_krw", 0.0),
-                "image_base64": ocr_result.get("image_base64", "")
-            }
-            
-            return Response(response_data)
-            
-        except Exception as e:
-            return Response({"error": f"OCR 처리 중 오류가 발생했습니다: {str(e)}"}, status=500)
-        finally:
-            # Clean up temporary file
-            import os
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    # ...
