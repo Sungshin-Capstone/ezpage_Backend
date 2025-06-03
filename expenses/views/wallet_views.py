@@ -98,8 +98,7 @@ class WalletScanResultView(APIView):
         converted_total_krw = request.data.get("converted_total_krw")
 
         # 필수 필드 검증
-        if (trip_id is None or 
-            total is None or 
+        if (total is None or 
             currency_symbol is None or 
             converted_total_krw is None):
             return Response(
