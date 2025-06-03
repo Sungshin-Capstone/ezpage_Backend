@@ -45,6 +45,10 @@ class Wallet(models.Model):
         self.quantity += delta_quantity
         self.save()
 
+    def get_wallet_dict(self):
+        # 이 지갑 객체의 권종과 수량을 딕셔너리로 반환
+        return {self.currency_unit: self.quantity}
+
     class Meta:
         unique_together = ('user', 'trip', 'currency_unit')
         ordering = ['-created_at']
