@@ -36,6 +36,7 @@ class WalletSummaryView(APIView):
             for wallet in wallets:
                 if wallet.quantity <= 0:
                     continue
+                print(f"[DEBUG] Wallet: {wallet.currency_unit} x {wallet.quantity} = {wallet.total_amount}, converted: {wallet.converted_total_krw}")
                 total_amount += wallet.total_amount or 0
                 converted_total_krw += wallet.converted_total_krw or 0
                 currency_code = wallet.currency_code
@@ -43,6 +44,7 @@ class WalletSummaryView(APIView):
                     "currency_unit": wallet.currency_unit,
                     "quantity": wallet.quantity
                 })
+
 
             return Response({
                 "total_amount": float(total_amount),
