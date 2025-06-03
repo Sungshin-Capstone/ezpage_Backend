@@ -82,18 +82,39 @@ class ImageUploadAPIView(APIView):
         }, status=201)
 
 class OCRScanView(APIView):
-        permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
-        def post(self, request):
-            image = request.FILES.get("image")
-            if not image:
-                return Response({"error": "이미지를 업로드해주세요."}, status=400)
+    def post(self, request):
+        image = request.FILES.get("file")  # Changed from "image" to "file" to match Postman form-data key
+        if not image:
+            return Response({"error": "이미지를 업로드해주세요."}, status=400)
 
-            # 임시로 파일 저장
-            with open("/tmp/temp_image.jpg", "wb") as f:
-                for chunk in image.chunks():
-                    f.write(chunk)
+        # Save image temporarily
+        temp_path = f"/tmp/{image.name}"
+        with open(temp_path, "wb") as f:
+            for chunk in image.chunks():
+                f.write(chunk)
 
-            # OCR 서버에 이미지 보내기
-            ocr_result = send_image_to_ocr("/tmp/temp_image.jpg")
-            return Response(ocr_result)
+        try:
+            # Send to OCR server
+            ocr_result = send_image_to_ocr(temp_path)
+            
+            # Format response according to requirements
+            response_data = {
+                "total": ocr_result.get("total", 0.0),
+                "currency_symbol": ocr_result.get("currency_symbol", "$"),
+                "detected": ocr_result.get("detected", {}),
+                "converted_total_krw": ocr_result.get("converted_total_krw", 0.0),
+                "image_base64": ocr_result.get("image_base64", "")
+            }
+            
+            return Response(response_data)
+            
+        except Exception as e:
+            return Response({"error": f"OCR 처리 중 오류가 발생했습니다: {str(e)}"}, status=500)
+        finally:
+            # Clean up temporary file
+            import os
+            if os.path.exists(temp_path):
+                os.remove(temp_path)

@@ -38,11 +38,16 @@ class Wallet(models.Model):
     def update_balance(self, currency_unit, delta_quantity):
         if self.currency_unit != currency_unit:
             raise ValueError("통화 단위가 일치하지 않습니다.")
-
         if self.quantity + delta_quantity < 0:
             raise ValueError(f"{currency_unit} 단위 화폐가 부족합니다.")
-
         self.quantity += delta_quantity
+        self.save()
+
+    def add_quantity(self, quantity):
+        """
+        같은 여행, 같은 화폐 단위의 지갑이면 수량을 누적해서 더합니다.
+        """
+        self.quantity += quantity
         self.save()
 
     def get_wallet_dict(self):
@@ -60,10 +65,8 @@ class Wallet(models.Model):
         try:
             denomination = wallet.currency_unit
             quantity = wallet.quantity
-
             if denomination is None or quantity is None:
                 return Decimal('0')
-
             return Decimal(str(denomination)) * Decimal(str(quantity))
         except (decimal.InvalidOperation, ValueError) as e:
             print(f"🔴 Decimal conversion error: denomination={denomination}, quantity={quantity}, error={e}")

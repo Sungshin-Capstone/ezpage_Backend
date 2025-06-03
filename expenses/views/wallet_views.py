@@ -6,6 +6,7 @@ from rest_framework import status
 from decimal import Decimal
 from ..models import Wallet, Trip
 from ..serializers import WalletSerializer
+from rest_framework.parsers import MultiPartParser, FormParser
 
 class WalletSummaryView(APIView):
     permission_classes = [IsAuthenticated]
@@ -75,69 +76,58 @@ class WalletSummaryView(APIView):
 
 class WalletScanResultView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):
-        trip_id = request.data.get('trip_id')
-        if not trip_id:
-            return Response(
-                {"error": "여행 ID가 필요합니다."}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        image = request.FILES.get("money_image")
+        trip_id = request.data.get("trip_id")
+        if not image or not trip_id:
+            return Response({"error": "이미지와 여행 ID가 필요합니다."}, status=400)
+
+        # 임시 파일 저장
+        temp_path = f"/tmp/{image.name}"
+        with open(temp_path, "wb") as f:
+            for chunk in image.chunks():
+                f.write(chunk)
 
         try:
+            from scanner.ocr_client import send_image_to_ocr
+            ocr_result = send_image_to_ocr(temp_path)
+            detected = ocr_result.get("detected", {})
+            currency_symbol = ocr_result.get("currency_symbol", "$")
+
+            from ..models import Wallet, Trip
             trip = Trip.objects.get(id=trip_id, user=request.user)
-            
-            # 동일한 화폐 단위의 지갑이 이미 존재하는지 확인
-            currency_unit = request.data.get('currency_unit')
-            existing_wallet = Wallet.objects.filter(
-                user=request.user,
-                trip=trip,
-                currency_unit=currency_unit
-            ).first()
-            
-            if existing_wallet:
-                # 기존 지갑 업데이트
-                serializer = WalletSerializer(existing_wallet, data=request.data, partial=True)
-            else:
-                # 새 지갑 생성
-                serializer = WalletSerializer(data=request.data)
-            
-            if serializer.is_valid():
-                wallet = serializer.save(user=request.user, trip=trip)
-                
-                # 응답에 총액 정보 추가
-                response_data = serializer.data
-                response_data['wallet_total'] = self._calculate_wallet_total(wallet)
-                response_data['currency_symbol'] = self._get_currency_symbol(wallet.country_code)
-                
-                return Response(response_data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            
+
+            for key, quantity in detected.items():
+                # 예: key = "USD_5dollar"
+                if "dollar" in key:
+                    currency_unit = float(key.split("_")[1].replace("dollar", ""))
+                    country_code = "US"
+                    currency_code = "USD"
+                else:
+                    continue  # 필요시 다른 화폐도 추가
+
+                # 같은 여행, 같은 화폐 단위의 지갑이 있으면 수량 누적, 없으면 새로 생성
+                wallet, created = Wallet.objects.get_or_create(
+                    user=request.user,
+                    trip=trip,
+                    currency_unit=currency_unit,
+                    defaults={"country_code": country_code, "currency_code": currency_code, "quantity": 0}
+                )
+                wallet.add_quantity(quantity)
+
+            return Response({
+                "message": "지갑에 자동 저장 완료!",
+                "detected": detected,
+                "currency_symbol": currency_symbol
+            })
         except Trip.DoesNotExist:
-            return Response(
-                {"error": "존재하지 않는 여행입니다."}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
-    
-    def _calculate_wallet_total(self, wallet):
-        """지갑의 총 금액 계산"""
-        total = Decimal('0')
-        wallet_dict = wallet.get_wallet_dict()
-        
-        for denomination, quantity in wallet_dict.items():
-            total += Decimal(str(denomination)) * Decimal(str(quantity))
-        
-        return float(total)
-    
-    def _get_currency_symbol(self, country_code):
-        """국가 코드에 따른 화폐 기호 반환"""
-        currency_symbols = {
-            'US': '$',
-            'CN': '¥',
-            'JP': '¥',
-            'KR': '₩'
-        }
-        return currency_symbols.get(country_code, '$')
+            return Response({"error": "존재하지 않는 여행입니다."}, status=404)
+        finally:
+            import os
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
 
 class WalletUpdateView(APIView):
     permission_classes = [IsAuthenticated]
