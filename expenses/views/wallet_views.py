@@ -37,8 +37,8 @@ class WalletSummaryView(APIView):
                 if wallet.quantity <= 0:
                     continue
                 print(f"[DEBUG] Wallet: {wallet.currency_unit} x {wallet.quantity} = {wallet.total_amount}, converted: {wallet.converted_total_krw}")
-                total_amount += wallet.total_amount or 0
-                converted_total_krw += wallet.converted_total_krw or 0
+                total_amount = sum(Decimal(w.currency_unit) * w.quantity for w in wallets if w.quantity > 0)
+                converted_total_krw = sum(w.converted_total_krw or 0 for w in wallets if w.quantity > 0)
                 currency_code = wallet.currency_code
                 currency_details.append({
                     "currency_unit": wallet.currency_unit,
