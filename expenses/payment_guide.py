@@ -25,6 +25,10 @@ class IntegratedPaymentSystem:
     def _round(self, amount: float, places: int) -> float:
         return float(Decimal(str(amount)).quantize(Decimal('0.' + '0' * places), rounding=ROUND_HALF_UP))
 
+    def _calculate_total(self, wallet: Dict[float, int]) -> float:
+        """지갑의 총 금액을 계산합니다."""
+        return sum(float(denom) * quantity for denom, quantity in wallet.items())
+
     def _recommend_payment(self, amount: float, wallet: Dict[float, int], currency: CurrencyConfig, strategy: PaymentStrategy) -> Dict:
         denominations = currency.denominations if strategy == PaymentStrategy.LARGE_BILLS else list(reversed(currency.denominations))
         remaining = self._round(amount, currency.decimal_places)
@@ -38,7 +42,7 @@ class IntegratedPaymentSystem:
                 used[denom] = count
                 remaining = self._round(remaining - denom * count, currency.decimal_places)
 
-        total_paid = sum(k * v for k, v in used.items())
+        total_paid = self._calculate_total(used)
         change = self._round(total_paid - amount, currency.decimal_places)
 
         if remaining > 0:
@@ -79,7 +83,7 @@ class IntegratedPaymentSystem:
 
         currency = self.currencies[country_code]
         food_price = self._round(food_price, currency.decimal_places)
-        wallet_total = sum(float(k) * v for k, v in wallet.items())
+        wallet_total = self._calculate_total(wallet)
 
         if wallet_total < food_price:
             return {

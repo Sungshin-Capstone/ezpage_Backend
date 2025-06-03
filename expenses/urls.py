@@ -15,7 +15,7 @@ from .views.wallet_views import (
     WalletUpdateView,
     WalletDeductView,
 )
-from .views.payment_guide_views import PaymentGuideAPIView
+from .views.payment_guide_views import PaymentGuideView
 
 urlpatterns = [
     # Expense endpoints
@@ -23,7 +23,6 @@ urlpatterns = [
     path('expenses/<int:trip_id>/', ExpenseListByTripView.as_view(), name='expense-list-trip'),
     path('expenses/date/', ExpenseListByDateView.as_view(), name='expense-list-date'),
     path('expenses/scan-result/', ScanResultExpenseCreateView.as_view(), name='expense-scan-result'),
-    path('expenses/payment-guide/', PaymentGuideAPIView.as_view(), name='payment-guide'),
     
     # Trip endpoints
     path('trips/', TripListCreateView.as_view(), name='trip-list-create'),
@@ -34,4 +33,7 @@ urlpatterns = [
     path('wallet/scan-result/', WalletScanResultView.as_view(), name='wallet-scan-result'),
     path('wallet/<int:pk>/update/', WalletUpdateView.as_view(), name='wallet-update'),
     path('wallet/deduct/', WalletDeductView.as_view(), name='wallet-deduct'),
+    
+    # Payment Guide endpoint
+    path('payment-guide/', PaymentGuideView.as_view(), name='payment-guide'),
 ]
