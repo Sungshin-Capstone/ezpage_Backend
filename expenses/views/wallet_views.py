@@ -91,7 +91,6 @@ class WalletScanResultView(APIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def post(self, request):
-        trip_id = request.data.get("trip_id")
         total = request.data.get("total")
         currency_symbol = request.data.get("currency_symbol")
         detected = request.data.get("detected", {})
@@ -106,14 +105,6 @@ class WalletScanResultView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-            trip = Trip.objects.get(id=trip_id, user=request.user)
-        except Trip.DoesNotExist:
-            return Response(
-                {"error": "존재하지 않는 여행입니다."}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
-
         # 통화 코드 매핑 (¥ 중복 문제 해결)
         currency_mapping = {
             '$': 'USD',
@@ -125,7 +116,7 @@ class WalletScanResultView(APIView):
         country_code = self._get_country_code(currency_code)
 
         # 기존 지갑 데이터 삭제 (새로운 스캔 결과로 대체)
-        Wallet.objects.filter(user=request.user, trip=trip, currency_code=currency_code).delete()
+        Wallet.objects.filter(user=request.user, currency_code=currency_code).delete()
 
         saved_items = {}
         
@@ -156,7 +147,6 @@ class WalletScanResultView(APIView):
                     # 새로운 지갑 생성
                     wallet = Wallet.objects.create(
                         user=request.user,
-                        trip=trip,
                         country_code=country_code,
                         currency_code=currency_code,
                         currency_unit=currency_unit,
@@ -169,16 +159,6 @@ class WalletScanResultView(APIView):
                 except (ValueError, TypeError) as e:
                     # 개별 아이템 처리 실패 시 해당 아이템만 건너뛰고 계속 진행
                     continue
-
-        # 여행의 총 지갑 금액 업데이트
-        try:
-            trip.total_wallet_amount = Decimal(str(total))
-            trip.save()
-        except (ValueError, TypeError):
-            return Response(
-                {"error": "총 금액 형식이 올바르지 않습니다."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
 
         return Response({
             "message": "지갑에 감지된 화폐 정보가 저장되었습니다.",
