@@ -22,27 +22,31 @@ class WalletSummaryView(APIView):
             if not wallets.exists():
                 return Response({"error": "해당 여행에 대한 지갑 정보가 없습니다."}, status=status.HTTP_404_NOT_FOUND)
 
+            # 총 금액: 단위 * 개수로 계산 및 KRW 환산 총액 합산
             total_amount = Decimal('0')
             converted_total_krw = Decimal('0')
-            currency_code = None
+            currency_code = None # 여러 통화가 있을 수 있으나, 일단 첫번째 통화 코드를 사용하거나 로직 변경 필요
             currency_details = []
 
             for wallet in wallets:
                 if wallet.quantity <= 0:
                     continue
+                
                 amount = Decimal(wallet.currency_unit) * Decimal(wallet.quantity)
                 total_amount += amount
-                converted_total_krw += wallet.converted_total_krw or 0
-                currency_code = wallet.currency_code
+                converted_total_krw += wallet.converted_total_krw # 이미 개별 지갑에 계산된 환산 금액을 합산
+                currency_code = wallet.currency_code # 루프 마지막에 설정된 통화 코드가 사용됨
+
                 currency_details.append({
                     "currency_unit": wallet.currency_unit,
                     "quantity": wallet.quantity
                 })
 
+            # 응답 데이터 구성
             return Response({
                 "total_amount": float(total_amount),
-                "currency_code": currency_code,
-                "converted_total_krw": float(converted_total_krw),
+                "currency_code": currency_code, # 합산된 지갑들의 통화 코드 (하나의 통화만 있다고 가정)
+                "converted_total_krw": float(converted_total_krw), # 합산된 KRW 환산 총액
                 "converted_currency_code": "KRW",
                 "currency_details": currency_details
             }, status=status.HTTP_200_OK)
@@ -148,6 +152,8 @@ class WalletScanResultView(APIView):
             trip.total_wallet_amount = Decimal(str(total))
             trip.converted_total_krw = Decimal(str(converted_total_krw))  # 스캐너에서 제공한 총 환산 금액 사용
             trip.save()
+            print(f"[DEBUG] Trip {trip.id} total_wallet_amount saved: {trip.total_wallet_amount}")
+            print(f"[DEBUG] Trip {trip.id} converted_total_krw saved: {trip.converted_total_krw}")
         except (ValueError, TypeError):
             return Response(
                 {"error": "총 금액 형식이 올바르지 않습니다."},
