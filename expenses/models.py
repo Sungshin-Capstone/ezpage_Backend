@@ -35,7 +35,7 @@ class Wallet(models.Model):
     currency_unit = models.PositiveIntegerField()
     quantity = models.PositiveIntegerField()
     total_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    converted_total_krw = models.DecimalField(max_digits=15, decimal_places=2, default=0)  # KRW로 환산된 총액
+    converted_total_krw = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def update_balance(self, currency_unit, delta_quantity):

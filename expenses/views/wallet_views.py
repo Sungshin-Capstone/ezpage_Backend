@@ -58,7 +58,7 @@ class WalletSummaryView(APIView):
             return Response({
                 "total_amount": float(total_amount),
                 "currency_code": currency_code,
-                "converted_total_krw": float(converted_total_krw),
+                "converted_total_krw": float(trip.converted_total_krw or 0),
                 "converted_currency_code": "KRW",
                 "currency_details": currency_details
             }, status=status.HTTP_200_OK)
@@ -159,6 +159,7 @@ class WalletScanResultView(APIView):
 
         try:
             trip.total_wallet_amount = Decimal(str(total))
+            trip.converted_total_krw = Decimal(str(converted_total_krw))
             trip.save()
         except (ValueError, TypeError):
             return Response(
