@@ -34,7 +34,7 @@ urlpatterns = [
     path('wallet/<int:pk>/update/', WalletUpdateView.as_view(), name='wallet-update'),
     path('wallet/deduct/', WalletDeductView.as_view(), name='wallet-deduct'),
     
-    # Payment Guide endpoint
-    path('payment-guide/', PaymentGuideView.as_view(), name='payment-guide'),
-    path('menu-payment/', MenuPaymentView.as_view(), name='menu-payment'),
+    # Payment Guide endpoints
+    path('expenses/payment-guide/', PaymentGuideView.as_view(), name='payment-guide'),
+    path('expenses/menu-payment/', MenuPaymentView.as_view(), name='menu-payment'),
 ]
