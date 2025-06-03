@@ -1,1 +1,1 @@
-echo web: gunicorn ezpage.wsgi > Procfile
+echo web: gunicorn ezpage.wsgi --bind 0.0.0.0:$PORT > Procfile
