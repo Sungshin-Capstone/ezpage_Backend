@@ -22,8 +22,8 @@ class WalletSummaryView(APIView):
             if not wallets.exists():
                 return Response({"error": "해당 여행에 대한 지갑 정보가 없습니다."}, status=status.HTTP_404_NOT_FOUND)
 
-            total_amount = sum((w.total_amount or Decimal('0')) for w in wallets if w.quantity > 0)
-            converted_total_krw = sum((w.converted_total_krw or Decimal('0')) for w in wallets if w.quantity > 0)
+            total_amount = sum((w.total_amount or Decimal('0')) for w in wallets if w.denominations)
+            converted_total_krw = sum((w.converted_total_krw or Decimal('0')) for w in wallets if w.denominations)
             currency_code = wallets.first().currency_code if wallets.exists() else None
 
             currency_details = {

@@ -3,4 +3,4 @@ from .models import Expense
 
 @admin.register(Expense)
 class ExpenseAdmin(admin.ModelAdmin):
-    list_display = ('id', 'amount', 'currency', 'date')  # 실제 필드에 맞게 수정
+    list_display = ('id', 'amount', 'currency_code', 'date')  # 실제 필드에 맞게 수정
