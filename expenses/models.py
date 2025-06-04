@@ -1,6 +1,8 @@
 # models.py
 
 from django.db import models
+from trips.models import Trip
+
 from django.conf import settings
 from decimal import Decimal, InvalidOperation
 
