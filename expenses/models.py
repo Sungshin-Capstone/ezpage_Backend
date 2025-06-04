@@ -34,8 +34,9 @@ class Wallet(models.Model):
     
     denominations = models.JSONField(default=dict)
     
-    total_amount = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0'))  # 외화 총액
-    converted_total_krw = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0'))  # 원화 환산 총액
+    total_amount = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True, default=None)
+    converted_total_krw = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True, default=None)
+
 
     created_at = models.DateTimeField(auto_now_add=True)
 
