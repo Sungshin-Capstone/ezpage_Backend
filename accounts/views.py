@@ -69,7 +69,7 @@ class PasswordResetRequestView(APIView):
         send_mail(
             subject="[Ezpage] 비밀번호 재설정 링크",
             message=f"다음 링크를 클릭하여 비밀번호를 재설정하세요:\n{reset_link}",
-            from_email="noreply@ezpage.com",
+            from_email=None,
             recipient_list=[email],
         )
 
