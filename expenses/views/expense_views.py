@@ -59,7 +59,7 @@ class GuideExpenseDeductView(APIView):
         currency = request.data.get("currency")
         total_price_original = Decimal(str(request.data.get("total_price_original", 0)))
         total_price_krw = Decimal(str(request.data.get("total_price_krw", 0)))
-        menu_items = request.data.get("menu_items", [])
+        menu_items = request.data.get("menus", [])
 
         if not trip_id or not menu_items:
             return Response({"error": "여행 ID와 메뉴 정보가 필요합니다."}, status=400)
