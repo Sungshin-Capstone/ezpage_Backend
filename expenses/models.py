@@ -42,7 +42,7 @@ class Wallet(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('user', 'trip')
+        unique_together = ('user', 'trip', 'currency_code')
 
     def calculate_total_amount(self):
         total = Decimal('0')

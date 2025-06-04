@@ -108,25 +108,30 @@ class WalletScanResultView(APIView):
         # 이렇게 if문 다음에 실행
         country_code = self._get_country_code(currency_code)
 
-        Wallet.objects.filter(user=request.user, trip=trip, currency_code=currency_code).delete()
-
         saved_items = {}
         if detected:
             try:
-                wallet, created = Wallet.objects.update_or_create(
-                    user=request.user,
-                    trip=trip,
-                    currency_code=currency_code,
-                    defaults={
-                        "country_code": country_code,
-                        "total_amount": Decimal(str(total)),
-                        "converted_total_krw": Decimal(str(converted_total_krw)),
-                        "denominations": detected
-                    }
-                )
-                saved_items = detected
-            except (ValueError, TypeError):
-                return Response({"error": "지갑 저장 중 오류"}, status=400)
+                wallet = Wallet.objects.filter(user=request.user, trip=trip, currency_code=currency_code).first()
+                if wallet:
+                    # 기존 데이터 업데이트
+                    wallet.total_amount = Decimal(str(total))
+                    wallet.converted_total_krw = Decimal(str(converted_total_krw))
+                    wallet.denominations = detected
+                    wallet.country_code = country_code
+                    wallet.save()
+                else:
+                    # 새로운 데이터 생성
+                    wallet = Wallet.objects.create(
+                        user=request.user,
+                        trip=trip,
+                        currency_code=currency_code,
+                        country_code=country_code,
+                        total_amount=Decimal(str(total)),
+                        converted_total_krw=Decimal(str(converted_total_krw)),
+                        denominations=detected
+                    )
+            except Exception as e:
+                return Response({"error": "지갑 저장 중 오류", "detail": str(e)}, status=400)
 
             for key, quantity in detected.items():
                 if quantity <= 0:
