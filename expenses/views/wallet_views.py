@@ -75,6 +75,7 @@ class WalletScanResultView(APIView):
         currency_symbol = request.data.get("currency_symbol")
         detected = request.data.get("detected", {})
         converted_total_krw = request.data.get("converted_total_krw")
+        country_code = self._get_country_code(currency_code)
 
         if (total is None or currency_symbol is None or converted_total_krw is None):
             return Response(
@@ -131,10 +132,11 @@ class WalletScanResultView(APIView):
                         user=request.user,
                         trip=trip,
                         currency_code=currency_code,  # 반드시 여기에 들어가야 함
+                        country_code = request.data.get("country_code"),
                         total_amount=Decimal(str(total)),
                         converted_total_krw=Decimal(str(converted_total_krw)),
                         denominations=detected
-                    )   
+                        )   
 
                     saved_items[key] = quantity
                 except (ValueError, TypeError):
