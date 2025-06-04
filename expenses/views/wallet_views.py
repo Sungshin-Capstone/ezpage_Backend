@@ -111,16 +111,25 @@ class WalletScanResultView(APIView):
         saved_items = {}
         if detected:
             try:
-                wallet = Wallet.objects.filter(user=request.user, trip=trip, currency_code=currency_code).first()
+                wallet = Wallet.objects.filter(user=request.user, trip=trip).first()
+                
                 if wallet:
-                    # 기존 데이터 업데이트
-                    wallet.total_amount = Decimal(str(total))
-                    wallet.converted_total_krw = Decimal(str(converted_total_krw))
-                    wallet.denominations = detected
-                    wallet.country_code = country_code
+                    if wallet.currency_code != currency_code:
+                        return Response(
+                            {"error": "이미 등록된 지갑의 통화와 다릅니다. 한 여행에는 하나의 통화만 사용할 수 있습니다."},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                    
+                    # 같은 통화 → 기존 값에 합산
+                    wallet.total_amount += Decimal(str(total))
+                    wallet.converted_total_krw += Decimal(str(converted_total_krw))
+
+                    for denom, qty in detected.items():
+                        wallet.denominations[denom] = wallet.denominations.get(denom, 0) + qty
+
                     wallet.save()
                 else:
-                    # 새로운 데이터 생성
+                    # 새 지갑 생성
                     wallet = Wallet.objects.create(
                         user=request.user,
                         trip=trip,
