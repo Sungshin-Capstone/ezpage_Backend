@@ -162,9 +162,15 @@ import os
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-# settings.py
+# 실서버에서도 이메일 전송 설정
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'your_email@gmail.com'
+EMAIL_HOST_PASSWORD = '앱 비밀번호 또는 SMTP 비밀번호'
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
 
 LANGUAGE_CODE = 'ko'
 USE_I18N = True
