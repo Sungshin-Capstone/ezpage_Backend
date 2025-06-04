@@ -25,24 +25,18 @@ class WalletSummaryView(APIView):
             total_amount = Decimal('0')
             converted_total_krw = Decimal('0')
             currency_code = None
-            currency_details = []
-
+            currency_details = {}
+            
             for wallet in wallets:
                 if wallet.quantity <= 0:
                     continue
-                amount = Decimal(wallet.currency_unit) * Decimal(wallet.quantity)
-                total_amount += amount
-                converted_total_krw += wallet.converted_total_krw
-                currency_code = wallet.currency_code
-                currency_details.append({
-                    "currency_unit": wallet.currency_unit,
-                    "quantity": wallet.quantity
-                })
+                key = f"{wallet.currency_code}_{wallet.currency_unit}dollar"
+                currency_details[key] = wallet.quantity
 
             return Response({
                 "trip_id": trip.id,
                 "user_id": trip.user.id,
-                "total_amount": float(total_amount),
+                "currency_code": wallet.currency_code,
                 "currency_code": currency_code,
                 "converted_total_krw": float(converted_total_krw),
                 "converted_currency_code": "KRW",
