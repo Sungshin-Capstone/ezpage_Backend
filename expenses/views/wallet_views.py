@@ -22,16 +22,15 @@ class WalletSummaryView(APIView):
             if not wallets.exists():
                 return Response({"error": "해당 여행에 대한 지갑 정보가 없습니다."}, status=status.HTTP_404_NOT_FOUND)
 
-            total_amount = Decimal('0')
-            converted_total_krw = Decimal('0')
+            total_amount = sum((w.total_amount or Decimal('0')) for w in wallets if w.quantity > 0)
+            converted_total_krw = sum((w.converted_total_krw or Decimal('0')) for w in wallets if w.quantity > 0)
             currency_code = wallets.first().currency_code if wallets.exists() else None
-            currency_details = {}
-            
-            for wallet in wallets:
-                if wallet.quantity <= 0:
-                    continue
-                key = f"{wallet.currency_code}_{wallet.currency_unit}dollar"
-                currency_details[key] = wallet.quantity
+
+            currency_details = {
+                f"{w.currency_code}_{w.currency_unit}dollar": w.quantity
+                for w in wallets if w.quantity > 0
+            }
+
 
             return Response({
                 "trip_id": trip.id,
@@ -151,6 +150,7 @@ class WalletScanResultView(APIView):
             "user_id": trip.user.id,
             "saved_items": saved_items,
             "total_amount": float(total),
+            "currency_symbol": currency_symbol,
             "converted_total_krw": float(converted_total_krw),
             "currency_code": currency_code,
             "country_code": country_code
