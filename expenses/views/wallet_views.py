@@ -131,15 +131,21 @@ class WalletScanResultView(APIView):
                     total_amount = request.data.get("total_amount")
                     converted_total_krw = request.data.get("converted_total_krw")
 
-                    wallet = Wallet.objects.create(
-                        user=request.user,
-                        trip=trip,
-                        currency_code=currency_code,  # 반드시 여기에 들어가야 함
-                        country_code=country_code,
-                        total_amount=Decimal(str(total)),
-                        converted_total_krw=Decimal(str(converted_total_krw)),
-                        denominations=detected
-                        )   
+                    if detected:
+                        try:
+                            wallet = Wallet.objects.create(
+                                user=request.user,
+                                trip=trip,
+                                currency_code=currency_code,
+                                country_code=country_code,
+                                total_amount=Decimal(str(total)),
+                                converted_total_krw=Decimal(str(converted_total_krw)),
+                                denominations=detected
+                            )
+                            saved_items = detected
+                        except (ValueError, TypeError):
+                            return Response({"error": "지갑 저장 중 오류"}, status=400)
+
 
                     saved_items[key] = quantity
                 except (ValueError, TypeError):
