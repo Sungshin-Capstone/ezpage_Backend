@@ -4,6 +4,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from ..models import Expense
 from ..serializers import ExpenseSerializer
+from decimal import Decimal
+
 
 class ExpenseCreateView(APIView):
     permission_classes = [IsAuthenticated]
