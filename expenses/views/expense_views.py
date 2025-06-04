@@ -2,9 +2,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-from ..models import Expense
-from ..serializers import ExpenseSerializer
 from decimal import Decimal
+from django.utils import timezone
+from ..models import Expense, Trip, Wallet
+from ..serializers import ExpenseSerializer
 
 
 class ExpenseCreateView(APIView):
@@ -17,6 +18,7 @@ class ExpenseCreateView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class ExpenseListByTripView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -25,20 +27,19 @@ class ExpenseListByTripView(APIView):
         serializer = ExpenseSerializer(expenses, many=True)
         return Response(serializer.data)
 
+
 class ExpenseListByDateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         date = request.query_params.get('date')
         if not date:
-            return Response(
-                {"error": "날짜를 입력해주세요."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "날짜를 입력해주세요."}, status=status.HTTP_400_BAD_REQUEST)
         
         expenses = Expense.objects.filter(date=date, user=request.user)
         serializer = ExpenseSerializer(expenses, many=True)
         return Response(serializer.data)
+
 
 class ScanResultExpenseCreateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -48,8 +49,8 @@ class ScanResultExpenseCreateView(APIView):
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
-    
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class GuideExpenseDeductView(APIView):
     permission_classes = [IsAuthenticated]
@@ -66,44 +67,53 @@ class GuideExpenseDeductView(APIView):
 
         try:
             trip = Trip.objects.get(id=trip_id, user=request.user)
-            wallets = Wallet.objects.filter(user=request.user, trip=trip, currency_code=currency)
-            if not wallets.exists():
-                return Response({"error": "해당 통화의 지갑이 없습니다."}, status=404)
+        except Trip.DoesNotExist:
+            return Response({"error": "해당 여행이 존재하지 않습니다."}, status=404)
 
-            # 총합 차감
-            before_total = sum(w.total_amount for w in wallets)
-            before_krw = sum(w.converted_total_krw for w in wallets)
+        wallets = Wallet.objects.filter(user=request.user, trip=trip, currency_code=currency)
+        if not wallets.exists():
+            return Response({"error": "해당 통화의 지갑이 없습니다."}, status=404)
 
-            for wallet in wallets:
-                wallet.total_amount -= total_price_original
-                wallet.converted_total_krw -= total_price_krw
-                wallet.save()
+        before_total = sum(w.total_amount for w in wallets)
+        before_krw = sum(w.converted_total_krw for w in wallets)
 
-            # 지출 데이터 저장
-            saved_expense_ids = []
-            for item in menu_items:
+        for wallet in wallets:
+            wallet.total_amount = (wallet.total_amount or Decimal('0')) - total_price_original
+            wallet.converted_total_krw = (wallet.converted_total_krw or Decimal('0')) - total_price_krw
+            wallet.save()
+
+        saved_expense_ids = []
+        for item in menu_items:
+            try:
+                price_original = Decimal(str(item.get("price_original", 0)))
+                price_krw_str = str(item.get("price_krw", "0")).replace(",", "").replace("원", "")
+                price_krw = Decimal(price_krw_str)
+
+                menu_ko = item.get("menu_ko", "")
+                menu_original = item.get("menu_original", "")
+
                 expense = Expense.objects.create(
                     user=request.user,
                     trip=trip,
                     currency=currency,
-                    amount=Decimal(str(item["price_original"])),
-                    description=item["menu_ko"],
+                    amount=price_original,
+                    description=menu_ko,
                     manual_input=False,
                     is_scan_result=True,
                     date=timezone.now().date()
                 )
                 saved_expense_ids.append(expense.id)
+            except Exception as e:
+                return Response({"error": f"지출 항목 저장 중 오류 발생: {str(e)}"}, status=400)
 
-            after_total = sum(w.total_amount for w in wallets)
-            after_krw = sum(w.converted_total_krw for w in wallets)
+        after_total = sum(w.total_amount for w in wallets)
+        after_krw = sum(w.converted_total_krw for w in wallets)
 
-            return Response({
-                "message": "지출 저장 및 지갑 차감이 완료되었습니다.",
-                "saved_expenses": saved_expense_ids,
-                "before_total_amount": float(before_total),
-                "after_total_amount": float(after_total),
-                "before_converted_total_krw": float(before_krw),
-                "after_converted_total_krw": float(after_krw)
-            })
-        except Trip.DoesNotExist:
-            return Response({"error": "해당 여행이 존재하지 않습니다."}, status=404)
+        return Response({
+            "message": "지출 저장 및 지갑 차감이 완료되었습니다.",
+            "saved_expenses": saved_expense_ids,
+            "before_total_amount": float(before_total),
+            "after_total_amount": float(after_total),
+            "before_converted_total_krw": float(before_krw),
+            "after_converted_total_krw": float(after_krw)
+        })
