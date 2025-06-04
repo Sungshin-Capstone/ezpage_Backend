@@ -4,14 +4,14 @@ from rest_framework import serializers
 from .models import Expense,Wallet,Trip
 
 class ScanResultExpenseSerializer(serializers.ModelSerializer):
-    currency = serializers.ChoiceField(choices=["KRW", "JPY", "CNY", "USD"])
+    currency_code = serializers.ChoiceField(choices=["KRW", "JPY", "CNY", "USD"])
 
     class Meta:
         model = Expense
-        fields = ['id', 'amount', 'currency', 'description']
+        fields = ['id', 'amount', 'currency_code', 'description']
 
 class ExpenseSerializer(serializers.ModelSerializer):
-    currency = serializers.ChoiceField(choices=["KRW", "JPY", "CNY", "USD"])
+    currency_code = serializers.ChoiceField(choices=["KRW", "JPY", "CNY", "USD"], source='currency')
     category = serializers.ChoiceField(choices=Expense.CATEGORY_CHOICES)
     is_scan_result = serializers.BooleanField(required=False, default=False)
     time = serializers.SerializerMethodField()
@@ -19,7 +19,7 @@ class ExpenseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Expense
-        fields = ['id', 'user', 'amount', 'currency', 'category', 'description', 'manual_input', 'date', 'time', 'created_at', 'is_scan_result']
+        fields = ['id', 'user', 'amount', 'currency_code', 'category', 'description', 'manual_input', 'date', 'time', 'created_at', 'is_scan_result']
         read_only_fields = ['id', 'user', 'created_at']
 
     def get_time(self, obj):

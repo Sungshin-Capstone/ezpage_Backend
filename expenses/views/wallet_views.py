@@ -24,7 +24,7 @@ class WalletSummaryView(APIView):
 
             total_amount = Decimal('0')
             converted_total_krw = Decimal('0')
-            currency_code = None
+            currency_code = wallets.first().currency_code if wallets.exists() else None
             currency_details = {}
             
             for wallet in wallets:
@@ -36,7 +36,7 @@ class WalletSummaryView(APIView):
             return Response({
                 "trip_id": trip.id,
                 "user_id": trip.user.id,
-                "currency_code": wallet.currency_code,
+                "total_amount": float(total_amount),
                 "currency_code": currency_code,
                 "converted_total_krw": float(converted_total_krw),
                 "converted_currency_code": "KRW",

@@ -15,7 +15,7 @@ class Expense(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='expenses')
     is_scan_result = models.BooleanField(default=False, verbose_name="스캔 결과 여부")
     amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="지출 금액")
-    currency = models.CharField(max_length=10, verbose_name="통화")
+    currency_code = models.CharField(max_length=10, verbose_name="통화 코드")
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='OTHER', verbose_name="카테고리")
     description = models.TextField(blank=True, null=True, verbose_name="지출 설명")
     manual_input = models.BooleanField(default=False, verbose_name="수동 입력 여부")
@@ -24,7 +24,7 @@ class Expense(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.user.username} - {self.amount} {self.currency} on {self.date}"
+        return f"{self.user.username} - {self.amount} {self.currency_code} on {self.date}"
 
 class Wallet(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallets')
