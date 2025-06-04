@@ -114,42 +114,26 @@ class WalletScanResultView(APIView):
 
         saved_items = {}
         if detected:
+            try:
+                wallet, created = Wallet.objects.update_or_create(
+                    user=request.user,
+                    trip=trip,
+                    currency_code=currency_code,
+                    defaults={
+                        "country_code": country_code,
+                        "total_amount": Decimal(str(total)),
+                        "converted_total_krw": Decimal(str(converted_total_krw)),
+                        "denominations": detected
+                    }
+                )
+                saved_items = detected
+            except (ValueError, TypeError):
+                return Response({"error": "지갑 저장 중 오류"}, status=400)
+
             for key, quantity in detected.items():
                 if quantity <= 0:
                     continue
-                try:
-                    if '_' not in key:
-                        continue
-                    parts = key.split('_')
-                    if len(parts) < 2:
-                        continue
-                    unit_part = parts[1]
-                    unit_str = ''.join(filter(str.isdigit, unit_part))
-                    if not unit_str:
-                        continue
-                    currency_unit = int(unit_str)
-                    total_amount = request.data.get("total_amount")
-                    converted_total_krw = request.data.get("converted_total_krw")
-
-                    if detected:
-                        try:
-                            wallet = Wallet.objects.create(
-                                user=request.user,
-                                trip=trip,
-                                currency_code=currency_code,
-                                country_code=country_code,
-                                total_amount=Decimal(str(total)),
-                                converted_total_krw=Decimal(str(converted_total_krw)),
-                                denominations=detected
-                            )
-                            saved_items = detected
-                        except (ValueError, TypeError):
-                            return Response({"error": "지갑 저장 중 오류"}, status=400)
-
-
-                    saved_items[key] = quantity
-                except (ValueError, TypeError):
-                    continue
+                saved_items[key] = quantity
 
         try:
             trip.total_wallet_amount = Decimal(str(total))

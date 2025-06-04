@@ -4,14 +4,14 @@ from rest_framework import serializers
 from .models import Expense,Wallet,Trip
 
 class ScanResultExpenseSerializer(serializers.ModelSerializer):
-    currency_code = serializers.ChoiceField(choices=["KRW", "JPY", "CNY", "USD"])
+    currency_code = serializers.ChoiceField(choices=["KRW", "JPY", "CNY", "USD"], required=False)
 
     class Meta:
         model = Expense
         fields = ['id', 'amount', 'currency_code', 'description']
 
 class ExpenseSerializer(serializers.ModelSerializer):
-    currency_code = serializers.ChoiceField(choices=["KRW", "JPY", "CNY", "USD"], source='currency')
+    currency_code = serializers.ChoiceField(choices=["KRW", "JPY", "CNY", "USD"], source='currency', required=False)
     category = serializers.ChoiceField(choices=Expense.CATEGORY_CHOICES)
     is_scan_result = serializers.BooleanField(required=False, default=False)
     time = serializers.SerializerMethodField()
