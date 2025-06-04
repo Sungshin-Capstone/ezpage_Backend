@@ -81,13 +81,18 @@ class WalletScanResultView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # 오늘 날짜에 포함된 여행 찾기
         today = timezone.now().date()
-        trip = Trip.objects.filter(
-            user=request.user,
-            start_date__lte=today,
-            end_date__gte=today
-        ).first()
+
+        trip_id = request.data.get("trip_id")
+        if trip_id:
+            trip = Trip.objects.filter(id=trip_id, user=request.user).first()
+        else:
+            trip = Trip.objects.filter(
+                user=request.user,
+                start_date__lte=today,
+                end_date__gte=today
+            ).order_by('start_date').first()
+
 
         if not trip:
             return Response(
@@ -112,7 +117,7 @@ class WalletScanResultView(APIView):
         if detected:
             try:
                 wallet = Wallet.objects.filter(user=request.user, trip=trip).first()
-                
+
                 if wallet:
                     if wallet.currency_code != currency_code:
                         return Response(
