@@ -25,6 +25,7 @@ class WalletSummaryView(APIView):
             total_amount = sum((w.total_amount or Decimal('0')) for w in wallets)
             converted_total_krw = sum((w.converted_total_krw or Decimal('0')) for w in wallets if w.denominations)
             currency_code = wallets.first().currency_code if wallets.exists() else None
+            currency_symbol = self._get_currency_symbol(currency_code)
 
             currency_details = {
                 f"{w.currency_code}_{unit}dollar": qty
@@ -38,9 +39,9 @@ class WalletSummaryView(APIView):
                 "trip_id": trip.id,
                 "user_id": trip.user.id,
                 "total_amount": float(total_amount),
-                "currency_code": currency_code,
+                "currency_symbol": currency_symbol,
                 "converted_total_krw": float(converted_total_krw),
-                "converted_currency_code": "KRW",
+                "converted_currency_symbol": "₩",
                 "currency_details": currency_details
             }, status=status.HTTP_200_OK)
 
@@ -75,7 +76,6 @@ class WalletScanResultView(APIView):
         currency_symbol = request.data.get("currency_symbol")
         detected = request.data.get("detected", {})
         converted_total_krw = request.data.get("converted_total_krw")
-        country_code = self._get_country_code(currency_code)
 
         if (total is None or currency_symbol is None or converted_total_krw is None):
             return Response(
@@ -106,6 +106,9 @@ class WalletScanResultView(APIView):
         currency_code = currency_mapping.get(currency_symbol)
         if not currency_code:
             return Response({"error": "알 수 없는 통화 기호입니다."}, status=400)
+
+        # 이렇게 if문 다음에 실행
+        country_code = self._get_country_code(currency_code)
 
         Wallet.objects.filter(user=request.user, trip=trip, currency_code=currency_code).delete()
 
