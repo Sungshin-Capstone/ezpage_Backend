@@ -41,6 +41,7 @@ class WalletSummaryView(APIView):
 
             return Response({
                 "trip_id": trip.id,
+                "user_id": trip.user.id,
                 "total_amount": float(total_amount),
                 "currency_code": currency_code,
                 "converted_total_krw": float(converted_total_krw),
@@ -153,6 +154,7 @@ class WalletScanResultView(APIView):
         return Response({
             "message": "지갑에 감지된 화폐 정보가 저장되었습니다.",
             "trip_id": trip.id,
+            "user_id": trip.user.id,
             "saved_items": saved_items,
             "total_amount": float(total),
             "converted_total_krw": float(converted_total_krw),
