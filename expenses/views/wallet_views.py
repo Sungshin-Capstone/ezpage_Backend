@@ -127,8 +127,8 @@ class WalletScanResultView(APIView):
                         trip=trip,
                         country_code=country_code,
                         currency_code=currency_code,
-                        currency_unit=currency_unit,
-                        quantity=quantity
+                        denominations=detected, 
+                        converted_total_krw=Decimal(str(converted_total_krw))
                     )
                     saved_items[key] = quantity
                 except (ValueError, TypeError):

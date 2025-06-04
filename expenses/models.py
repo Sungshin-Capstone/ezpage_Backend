@@ -31,56 +31,26 @@ class Wallet(models.Model):
     trip = models.ForeignKey('Trip', on_delete=models.CASCADE, related_name='wallets')
     country_code = models.CharField(max_length=5)
     currency_code = models.CharField(max_length=5)
-    currency_unit = models.PositiveIntegerField()
-    quantity = models.PositiveIntegerField()
-    total_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    converted_total_krw = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    
+    denominations = models.JSONField(default=dict)
+    
+    total_amount = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0'))  # 외화 총액
+    converted_total_krw = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0'))  # 원화 환산 총액
+
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def update_balance(self, currency_unit, delta_quantity):
-        if self.currency_unit != currency_unit:
-            raise ValueError("통화 단위가 일치하지 않습니다.")
-        if self.quantity + delta_quantity < 0:
-            raise ValueError(f"{currency_unit} 단위 화폐가 부족합니다.")
-        self.quantity += delta_quantity
-        self.calculate_total_amount()
-        self.save()
-
-    def add_quantity(self, quantity):
-        """
-        같은 여행, 같은 화폐 단위의 지갑이면 수량을 누적해서 더합니다.
-        """
-        self.quantity += quantity
-        self.calculate_total_amount()
-        self.save()
-
     def calculate_total_amount(self):
-        """총액을 계산하고 저장합니다."""
-        self.total_amount = Decimal(str(self.currency_unit)) * Decimal(str(self.quantity))
-
-    def get_wallet_dict(self):
-        # 이 지갑 객체의 권종과 수량을 딕셔너리로 반환
-        return {
-            'currency_unit': self.currency_unit,
-            'quantity': self.quantity,
-            'currency_code': self.currency_code,
-            'total_amount': float(self.total_amount),
-            'converted_total_krw': float(self.converted_total_krw or 0)  # 안전 처리 추가
-        }
-
-    class Meta:
-        unique_together = ('user', 'trip', 'currency_unit')
-        ordering = ['-created_at']
-
-    def __str__(self):
-        return f"{self.user.username} - {self.trip} - {self.currency_unit}{self.currency_code} x {self.quantity}"
-
-    def save(self, *args, **kwargs):
-        self.calculate_total_amount()
-        if not self.converted_total_krw:
-            self.converted_total_krw = Decimal('0')  # 혹은 변환 로직이 있다면 그걸 넣기
-        super().save(*args, **kwargs)
-
+        total = Decimal('0')
+        for key, qty in self.denominations.items():
+            # 키에서 숫자만 추출 (예: "USD_50dollar" → 50)
+            match = re.search(r'(\d+)', key)
+            if match:
+                unit = Decimal(match.group(1))
+                total += unit * Decimal(qty)
+        self.total_amount = total
+        def save(self, *args, **kwargs):
+            self.calculate_total_amount()  # total_amount 계산
+            super().save(*args, **kwargs)
 
 
 class Trip(models.Model):
