@@ -102,8 +102,9 @@ class WalletScanResultView(APIView):
             '￥': 'CNY',
             '₩': 'KRW'
         }
-        currency_code = currency_mapping.get(currency_symbol, 'USD')
-        country_code = self._get_country_code(currency_code)
+        currency_code = currency_mapping.get(currency_symbol)
+        if not currency_code:
+            return Response({"error": "알 수 없는 통화 기호입니다."}, status=400)
 
         Wallet.objects.filter(user=request.user, trip=trip, currency_code=currency_code).delete()
 
@@ -129,10 +130,10 @@ class WalletScanResultView(APIView):
                     wallet = Wallet.objects.create(
                         user=request.user,
                         trip=trip,
-                        currency_code=request.data.get("currency_code"),
-                        total_amount=total_amount,
-                        converted_total_krw=converted_total_krw,
-                        denominations=request.data.get("denominations"),
+                        currency_code=currency_code,  # 반드시 여기에 들어가야 함
+                        total_amount=Decimal(str(total)),
+                        converted_total_krw=Decimal(str(converted_total_krw)),
+                        denominations=detected
                     )   
 
                     saved_items[key] = quantity
