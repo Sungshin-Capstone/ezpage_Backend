@@ -135,7 +135,7 @@ class WalletScanResultView(APIView):
                         user=request.user,
                         trip=trip,
                         currency_code=currency_code,  # 반드시 여기에 들어가야 함
-                        country_code = request.data.get("country_code"),
+                        country_code=country_code,
                         total_amount=Decimal(str(total)),
                         converted_total_krw=Decimal(str(converted_total_krw)),
                         denominations=detected
