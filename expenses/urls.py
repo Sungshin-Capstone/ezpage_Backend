@@ -23,7 +23,8 @@ urlpatterns = [
     path('expenses/<int:trip_id>/', ExpenseListByTripView.as_view(), name='expense-list-trip'),
     path('expenses/date/', ExpenseListByDateView.as_view(), name='expense-list-date'),
     path('expenses/scan-result/', ScanResultExpenseCreateView.as_view(), name='expense-scan-result'),
-    path('api/v1/expenses/guide-payment/', GuideExpenseDeductView.as_view(), name='guide-expense-deduct'),
+    path('expenses/guide-payment/', GuideExpenseDeductView.as_view(), name='guide-expense-deduct'),
+
     
     # Trip endpoints
     path('trips/', TripListCreateView.as_view(), name='trip-list-create'),
