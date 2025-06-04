@@ -33,8 +33,6 @@ class WalletSummaryView(APIView):
                 for unit, qty in w.denominations.items()
             }
 
-
-
             return Response({
                 "trip_id": trip.id,
                 "user_id": trip.user.id,
@@ -202,11 +200,13 @@ class WalletDeductView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        trip_id = request.data.get('trip_id')
-        deductions = request.data.get('deductions', [])
-        if not trip_id or not deductions:
+        trip_id = request.data.get("trip_id")
+        deduct_amount = request.data.get("deduct_amount")
+        deduct_amount_krw = request.data.get("deduct_amount_krw")
+
+        if not trip_id or deduct_amount is None or deduct_amount_krw is None:
             return Response(
-                {"error": "여행 ID와 차감 정보가 필요합니다."}, 
+                {"error": "여행 ID, 차감 금액, 환산 금액이 모두 필요합니다."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -215,60 +215,41 @@ class WalletDeductView(APIView):
             wallets = Wallet.objects.filter(user=request.user, trip=trip)
             if not wallets.exists():
                 return Response(
-                    {"error": "해당 여행에 대한 지갑 정보가 없습니다."}, 
+                    {"error": "해당 여행에 대한 지갑 정보가 없습니다."},
                     status=status.HTTP_404_NOT_FOUND
                 )
 
-            before_total = Decimal('0')
-            for wallet in wallets:
-                before_total += Decimal(str(self._calculate_wallet_total(wallet)))
-            
-            total_deduction = Decimal('0')
-            for deduction in deductions:
-                currency_unit = Decimal(str(deduction.get('currency_unit', 0)))
-                quantity = Decimal(str(deduction.get('quantity', 0)))
-                total_deduction += currency_unit * quantity
-            
-            if total_deduction > before_total:
-                return Response(
-                    {"error": "차감할 금액이 지갑 잔액을 초과합니다."}, 
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+            before_total_amount = sum((w.total_amount or Decimal("0")) for w in wallets)
+            before_converted_total_krw = sum((w.converted_total_krw or Decimal("0")) for w in wallets)
 
-            for deduction in deductions:
-                currency_unit = deduction.get('currency_unit')
-                quantity = deduction.get('quantity')
-                if currency_unit and quantity:
-                    wallet = wallets.filter(currency_unit=currency_unit).first()
-                    if wallet:
-                        wallet.update_balance(currency_unit, -quantity)
+            after_total_amount = before_total_amount - Decimal(str(deduct_amount))
+            after_converted_total_krw = before_converted_total_krw - Decimal(str(deduct_amount_krw))
 
-            after_total = Decimal('0')
+            # 차감 적용
             for wallet in wallets:
-                after_total += Decimal(str(self._calculate_wallet_total(wallet)))
-            
+                if wallet.total_amount:
+                    wallet.total_amount = max(wallet.total_amount - Decimal(str(deduct_amount)), Decimal("0"))
+                if wallet.converted_total_krw:
+                    wallet.converted_total_krw = max(wallet.converted_total_krw - Decimal(str(deduct_amount_krw)), Decimal("0"))
+                wallet.save()
+
             return Response({
                 "message": "지갑에서 금액이 차감되었습니다.",
-                "before_total": float(before_total),
-                "after_total": float(after_total),
-                "deducted_amount": float(before_total - after_total),
-                "currency_symbol": self._get_currency_symbol(wallets.first().country_code)
-            })
+                "before_total_amount": float(before_total_amount),
+                "before_converted_total_krw": float(before_converted_total_krw),
+                "deduct_amount": float(deduct_amount),
+                "deduct_amount_krw": float(deduct_amount_krw),
+                "after_total_amount": float(after_total_amount),
+                "after_converted_total_krw": float(after_converted_total_krw),
+                "currency_symbol": self._get_currency_symbol(wallets.first().country_code),
+                "converted_currency_symbol": "₩"
+            }, status=status.HTTP_200_OK)
+
         except Trip.DoesNotExist:
             return Response({"error": "존재하지 않는 여행입니다."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response(
-                {"error": f"차감 처리 중 오류가 발생했습니다: {str(e)}"}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-    
-    def _calculate_wallet_total(self, wallet):
-        total = Decimal('0')
-        wallet_dict = wallet.get_wallet_dict()
-        for denomination, quantity in wallet_dict.items():
-            total += Decimal(str(denomination)) * Decimal(str(quantity))
-        return float(total)
-    
+            return Response({"error": f"차감 처리 중 오류가 발생했습니다: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     def _get_currency_symbol(self, country_code):
         currency_symbols = {
             'US': '$',
