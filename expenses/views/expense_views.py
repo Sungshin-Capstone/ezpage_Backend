@@ -100,7 +100,8 @@ class GuideExpenseDeductView(APIView):
                     description=menu_ko,
                     manual_input=False,
                     is_scan_result=True,
-                    date=timezone.now().date()
+                    date=timezone.now().date(),
+                    category="FOOD"
                 )
                 saved_expense_ids.append(expense.id)
             except Exception as e:
