@@ -32,7 +32,7 @@ class WalletSummaryView(APIView):
                     continue
                 amount = Decimal(wallet.currency_unit) * Decimal(wallet.quantity)
                 total_amount += amount
-                converted_total_krw += wallet.converted_total_krw or 0
+                converted_total_krw += wallet.converted_total_krw
                 currency_code = wallet.currency_code
                 currency_details.append({
                     "currency_unit": wallet.currency_unit,
