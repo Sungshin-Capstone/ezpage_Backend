@@ -15,7 +15,7 @@ class Expense(models.Model):
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='expenses')
     is_scan_result = models.BooleanField(default=False, verbose_name="스캔 결과 여부")
-    trip = models.ForeignKey(Trip, on_delete=models.CASCADE) 
+    trip = models.ForeignKey('expenses.Trip', on_delete=models.CASCADE)
     currency = models.CharField(max_length=10)  
     amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="지출 금액")
     currency_code = models.CharField(max_length=10, verbose_name="통화 코드")
