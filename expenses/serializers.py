@@ -11,15 +11,20 @@ class ScanResultExpenseSerializer(serializers.ModelSerializer):
         fields = ['id', 'amount', 'currency_code', 'description']
 
 class ExpenseSerializer(serializers.ModelSerializer):
-    currency_code = serializers.ChoiceField(choices=["KRW", "JPY", "CNY", "USD"], source='currency', required=False)
+    currency = serializers.ChoiceField(choices=["KRW", "JPY", "CNY", "USD"])
     category = serializers.ChoiceField(choices=Expense.CATEGORY_CHOICES)
     is_scan_result = serializers.BooleanField(required=False, default=False)
+    manual_input = serializers.BooleanField(required=False, default=False)
     time = serializers.SerializerMethodField()
-    amount = serializers.IntegerField()
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    trip = serializers.PrimaryKeyRelatedField(queryset=Trip.objects.all(), required=True)
 
     class Meta:
         model = Expense
-        fields = ['id', 'user', 'amount', 'currency_code', 'category', 'description', 'manual_input', 'date', 'time', 'created_at', 'is_scan_result']
+        fields = [
+            'id', 'user', 'trip', 'amount', 'currency', 'category',
+            'description', 'manual_input', 'date', 'time', 'created_at', 'is_scan_result'
+        ]
         read_only_fields = ['id', 'user', 'created_at']
 
     def get_time(self, obj):
@@ -27,8 +32,6 @@ class ExpenseSerializer(serializers.ModelSerializer):
             return obj.time.strftime("%H:%M")
         return None
 
-    def get_amount(self, obj):
-        return int(obj.amount)
 
 
 class WalletScanResultSerializer(serializers.ModelSerializer):
