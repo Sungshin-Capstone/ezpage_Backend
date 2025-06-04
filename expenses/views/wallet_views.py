@@ -27,9 +27,11 @@ class WalletSummaryView(APIView):
             currency_code = wallets.first().currency_code if wallets.exists() else None
 
             currency_details = {
-                f"{w.currency_code}_{w.currency_unit}dollar": w.quantity
-                for w in wallets if w.quantity > 0
+                f"{w.currency_code}_{unit}dollar": qty
+                for w in wallets if w.denominations
+                for unit, qty in w.denominations.items()
             }
+
 
 
             return Response({
