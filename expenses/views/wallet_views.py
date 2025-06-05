@@ -27,11 +27,13 @@ class WalletSummaryView(APIView):
             currency_code = wallets.first().currency_code if wallets.exists() else None
             currency_symbol = self._get_currency_symbol(currency_code)
 
-            currency_details = {
-                f"{w.currency_code}_{unit}dollar": qty
-                for w in wallets if w.denominations
-                for unit, qty in w.denominations.items()
-            }
+            currency_details = {}
+            for w in wallets:
+                # Ensure denominations is treated as a dictionary
+                wallet_denominations = w.denominations if isinstance(w.denominations, dict) else {}
+                if wallet_denominations:
+                    for unit, qty in wallet_denominations.items():
+                         currency_details[f"{w.currency_code}_{unit}dollar"] = qty
 
             return Response({
                 "trip_id": trip.id,
