@@ -3,8 +3,8 @@
 <table>
   <tr>
     <td align="center">
-      <img src="https://github.com/user-attachments/assets/7a83512b-b68d-4fcb-a1d7-c79aa6a8ba3c" width="200"/><br/>
-      <b> 20221336 김예준준 </b>
+      <img src="![Image](https://github.com/user-attachments/assets/f86e3f79-861d-4a8e-9ef4-3206cb392edd)" width="200"/><br/>
+      <b> 20221336 김예준 </b>
     </td>
   </tr>
 </table>  
