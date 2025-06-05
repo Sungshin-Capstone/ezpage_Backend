@@ -85,6 +85,7 @@ class GuideExpenseDeductView(APIView):
         saved_expense_ids = []
         for item in menu_items:
             try:
+                currency = item.get("currency")
                 price_original = Decimal(str(item.get("price_original", 0)))
                 price_krw_str = str(item.get("price_krw", "0")).replace(",", "").replace("원", "")
                 price_krw = Decimal(price_krw_str)
