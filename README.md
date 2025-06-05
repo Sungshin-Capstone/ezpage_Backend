@@ -3,14 +3,14 @@
 <table>
   <tr>
     <td align="center">
-      <img src="![Image](https://github.com/user-attachments/assets/f86e3f79-861d-4a8e-9ef4-3206cb392edd)" width="200"/><br/>
+      <img src="https://github.com/user-attachments/assets/f86e3f79-861d-4a8e-9ef4-3206cb392edd" width="200"/><br/>
       <b> 20221336 김예준 </b>
     </td>
   </tr>
 </table>  
 ---
 ### 🌟 주요 기능
-✅ 사용자 관리 (회원가입, 로그인, 인증)  
+✅ 사용자 관리 (회원가입, 로그인, 인증)
 ✅ 여행 생성/수정/삭제/조회  
 ✅ 지출 기록 (수동/스캔 입력)  
 ✅ 지갑 관리 (화폐 종류·수량)  
