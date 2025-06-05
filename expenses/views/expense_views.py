@@ -57,7 +57,6 @@ class GuideExpenseDeductView(APIView):
 
     def post(self, request):
         trip_id = request.data.get("trip_id")
-        currency = request.data.get("currency")
         total_price_original = Decimal(str(request.data.get("total_price_original", 0)))
         total_price_krw = Decimal(str(request.data.get("total_price_krw", 0)))
         menu_items = request.data.get("menus", [])
@@ -70,6 +69,16 @@ class GuideExpenseDeductView(APIView):
         except Trip.DoesNotExist:
             return Response({"error": "해당 여행이 존재하지 않습니다."}, status=404)
 
+        # Get unique currencies from menu items
+        currencies = set(item.get("currency") for item in menu_items)
+        if not currencies:
+            return Response({"error": "메뉴 항목에 통화 정보가 없습니다."}, status=400)
+
+        # Check if all items have the same currency
+        if len(currencies) > 1:
+            return Response({"error": "모든 메뉴 항목은 동일한 통화를 사용해야 합니다."}, status=400)
+
+        currency = currencies.pop()
         wallets = Wallet.objects.filter(user=request.user, trip=trip, currency_code=currency)
         if not wallets.exists():
             return Response({"error": "해당 통화의 지갑이 없습니다."}, status=404)
