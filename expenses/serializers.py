@@ -17,12 +17,11 @@ class ExpenseSerializer(serializers.ModelSerializer):
     manual_input = serializers.BooleanField(required=False, default=False)
     time = serializers.SerializerMethodField()
     amount = serializers.DecimalField(max_digits=12, decimal_places=2)
-    trip = serializers.PrimaryKeyRelatedField(queryset=Trip.objects.all(), required=True)
 
     class Meta:
         model = Expense
         fields = [
-            'id', 'user', 'trip', 'amount', 'currency', 'category',
+            'id', 'user', 'amount', 'currency', 'category',
             'description', 'manual_input', 'date', 'time', 'created_at', 'is_scan_result'
         ]
         read_only_fields = ['id', 'user', 'created_at']
