@@ -42,7 +42,6 @@ class ExchangeRateService:
             # KRW는 항상 1.0
             exchange_rates['KRW'] = {'rate': Decimal('1.0'), 'name': '한국 원'}
 
-            # 캐시에 저장
             cache.set(cls.CACHE_KEY, exchange_rates, cls.CACHE_TIMEOUT)
             return exchange_rates
 
