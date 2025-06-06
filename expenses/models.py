@@ -65,7 +65,7 @@ class Trip(models.Model):
     currency_code = models.CharField(max_length=5, default='KRW', verbose_name="기본 통화")  # 기본 통화 코드
     start_date = models.DateField()
     end_date = models.DateField()
-    color = models.CharField(max_length=7, default="#000000", verbose_name="색상")  # Hex color code
+    color = models.CharField(max_length=7, default="#000000", verbose_name="색상")
     companions = models.PositiveIntegerField(default=1, verbose_name="동행자 수")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
